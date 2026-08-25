@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from personal_assistant.state import AppState
-from personal_assistant.storage import DATA_FILE, Storage
+from personal_assistant.storage import DATA_FILE, ENV_DATA_FILE, Storage
 
 
 @pytest.fixture
@@ -67,3 +67,15 @@ def test_no_temporary_file_is_left_behind(storage):
     storage.save(AppState.empty())
 
     assert list(storage.path.parent.glob("*.tmp")) == []
+
+
+def test_the_environment_variable_overrides_the_location(tmp_path, monkeypatch):
+    monkeypatch.setenv(ENV_DATA_FILE, str(tmp_path / "dev.pkl"))
+
+    assert Storage().path == tmp_path / "dev.pkl"
+
+
+def test_without_the_variable_the_home_location_is_used(monkeypatch):
+    monkeypatch.delenv(ENV_DATA_FILE, raising=False)
+
+    assert Storage().path == DATA_FILE

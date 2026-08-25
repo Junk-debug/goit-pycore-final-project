@@ -60,6 +60,32 @@ ruff check .
 ruff format .
 ```
 
+### Running during development
+
+The editable install means the `assistant` command already runs the sources in
+this directory: edit a file and the next run picks it up, with no reinstall.
+Reinstall only after changing `pyproject.toml`.
+
+```bash
+source .venv/bin/activate
+
+assistant                                  # interactive session
+assistant contact list                     # a single command
+python -m personal_assistant               # same, without the console script
+printf 'help\nexit\n' | assistant         # scripted, useful for a quick check
+```
+
+By default the assistant reads and writes `~/.personal_assistant/data.pkl`.
+Point `PERSONAL_ASSISTANT_DATA` somewhere else to keep a development session
+away from real data:
+
+```bash
+export PERSONAL_ASSISTANT_DATA=/tmp/assistant-dev.pkl
+assistant
+```
+
+Delete that file to start from an empty state.
+
 ## Team
 
 <!-- TODO: members and roles -->

@@ -16,13 +16,25 @@ from personal_assistant.state import AppState
 
 DATA_DIR = Path.home() / ".personal_assistant"
 DATA_FILE = DATA_DIR / "data.pkl"
+ENV_DATA_FILE = "PERSONAL_ASSISTANT_DATA"
+
+
+def default_path() -> Path:
+    """Where the state lives.
+
+    Normally the file inside the user's home directory required by P1. The
+    `{ENV_DATA_FILE}` environment variable overrides it, which keeps a
+    development session from writing over real data.
+    """
+    override = os.environ.get(ENV_DATA_FILE)
+    return Path(override).expanduser() if override else DATA_FILE
 
 
 class Storage:
     """Reads and writes the application state as one pickle file."""
 
     def __init__(self, path: Path | None = None) -> None:
-        self.path = Path(path) if path is not None else DATA_FILE
+        self.path = Path(path) if path is not None else default_path()
 
     def load(self) -> AppState:
         """Return the stored state, or an empty one when it cannot be read.
