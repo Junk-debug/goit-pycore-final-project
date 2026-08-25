@@ -98,6 +98,72 @@ def register(app: typer.Typer) -> None:
         ctx.obj.section(AddressBook).delete(contact.name.value)
         ui.success(f"Deleted {contact.name}.")
 
+    @contacts.command("edit")
+    def edit_contact(
+        ctx: typer.Context,
+        name: Annotated[
+            str, typer.Argument(metavar="<name>", help="the contact to change")
+        ],
+        new_name: Annotated[
+            str | None,
+            typer.Option("--name", metavar="<new>", help="rename the contact"),
+        ] = None,
+        email: Annotated[
+            str | None,
+            typer.Option(
+                metavar="<email>",
+                help="set the email, or clear it when given an empty value",
+            ),
+        ] = None,
+        address: Annotated[
+            str | None,
+            typer.Option(
+                metavar="<address>",
+                help="set the address, or clear it when given an empty value",
+            ),
+        ] = None,
+        birthday: Annotated[
+            str | None,
+            typer.Option(
+                metavar="<DD.MM.YYYY>",
+                help="set the birthday, or clear it when given an empty value",
+            ),
+        ] = None,
+        add_phone: Annotated[
+            str,
+            typer.Option(
+                metavar="<phone>[,<phone>]",
+                help="add phone numbers, separated by commas",
+            ),
+        ] = "",
+        remove_phone: Annotated[
+            str,
+            typer.Option(
+                metavar="<phone>[,<phone>]",
+                help="remove phone numbers, separated by commas",
+            ),
+        ] = "",
+    ) -> None:
+        """change fields of an existing contact"""
+        book = ctx.obj.section(AddressBook)
+        contact = required(ctx.obj, name)
+
+        for number in commas(remove_phone):
+            contact.remove_phone(number)
+        for number in commas(add_phone):
+            contact.add_phone(number)
+
+        if email is not None:
+            contact.set_email(email)
+        if address is not None:
+            contact.set_address(address)
+        if birthday is not None:
+            contact.set_birthday(birthday)
+        if new_name is not None:
+            book.rename(contact, new_name)
+
+        ui.success(f"Updated {contact}.")
+
 
 def required(state: AppState, name: str) -> Contact:
     """Return the named contact, or report that the book does not hold one."""

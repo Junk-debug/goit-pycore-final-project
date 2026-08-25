@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import UserDict
 
+from personal_assistant.errors import ValidationError
 from personal_assistant.models.contact import Contact
 
 
@@ -28,6 +29,16 @@ class AddressBook(UserDict[str, Contact]):
             if stored.casefold() == wanted:
                 return contact
         return None
+
+    def rename(self, contact: Contact, new_name: str) -> None:
+        """Give a stored contact a new name, keeping the book keyed by it."""
+        taken = self.find(new_name)
+        if taken is not None and taken is not contact:
+            raise ValidationError(f"A contact named '{new_name}' already exists.")
+
+        del self.data[contact.name.value]
+        contact.rename(new_name)
+        self.data[contact.name.value] = contact
 
     def delete(self, name: str) -> bool:
         """Remove a contact. Returns whether one was there."""
