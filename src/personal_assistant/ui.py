@@ -100,7 +100,7 @@ def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
     lines = []
     for label, value in fields:
         line = Text()
-        line.append(f"{label:>{width}}  ", style="bold cyan")
+        line.append(f"{label:<{width}}  ", style="bold cyan")
         line.append(value if value else "—")
         lines.append(line)
     return Panel(Group(*lines), title=title, title_align="left", expand=False)
