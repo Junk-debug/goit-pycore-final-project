@@ -220,6 +220,46 @@ class TestContact:
         assert "address" not in shown
 
 
+class TestMatches:
+    def test_a_substring_of_the_name_matches(self) -> None:
+        contact = Contact("Anna Kowalska")
+
+        assert contact.matches("kowal")
+
+    def test_matching_ignores_case(self) -> None:
+        contact = Contact("Anna Kowalska")
+
+        assert contact.matches("KOWALSKA")
+
+    def test_a_substring_of_a_phone_matches(self) -> None:
+        contact = Contact("John")
+        contact.add_phone("+48123456789")
+
+        assert contact.matches("123456")
+
+    def test_a_substring_of_the_email_matches(self) -> None:
+        contact = Contact("John")
+        contact.set_email("john@example.com")
+
+        assert contact.matches("@example.com")
+
+    def test_a_substring_of_the_address_matches(self) -> None:
+        contact = Contact("John")
+        contact.set_address("Dluga 5, Gdansk")
+
+        assert contact.matches("gdansk")
+
+    def test_an_unset_field_does_not_match(self) -> None:
+        contact = Contact("John")
+
+        assert not contact.matches("@example.com")
+
+    def test_an_unrelated_query_does_not_match(self) -> None:
+        contact = Contact("John")
+
+        assert not contact.matches("Anna")
+
+
 class TestAddressBook:
     def test_a_contact_is_found_by_its_name(self) -> None:
         book = AddressBook()
