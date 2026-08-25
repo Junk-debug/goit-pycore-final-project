@@ -80,6 +80,26 @@ def register(app: typer.Typer) -> None:
         ]
         ui.render(ui.table(str(contact.name), ("Field", "Value"), rows))
 
+    @contacts.command("delete")
+    def delete_contact(
+        ctx: typer.Context,
+        name: Annotated[
+            str, typer.Argument(metavar="<name>", help="the contact to remove")
+        ],
+        force: Annotated[
+            bool, typer.Option("--force", help="do not ask for confirmation")
+        ] = False,
+    ) -> None:
+        """remove a contact and everything stored with it"""
+        contact = required(ctx.obj, name)
+
+        if not force and not ui.confirm(f"Delete {contact.name} and all its data?"):
+            ui.render("Cancelled.")
+            return
+
+        ctx.obj.section(AddressBook).delete(contact.name.value)
+        ui.success(f"Deleted {contact.name}.")
+
 
 def required(state: AppState, name: str) -> Contact:
     """Return the named contact, or report that the book does not hold one."""

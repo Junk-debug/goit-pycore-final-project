@@ -163,3 +163,32 @@ class TestShow:
     def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
         assert run(command, state, "contact", "show", "Nobody") == 1
         assert "No contact named 'Nobody'" in capsys.readouterr().out
+
+
+class TestDelete:
+    def test_a_contact_is_removed_with_force(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "delete", "John", "--force") == 0
+        assert state.section(AddressBook).find("John") is None
+
+    def test_without_force_and_without_a_terminal_nothing_is_removed(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "John")
+        capsys.readouterr()
+
+        assert run(command, state, "contact", "delete", "John") == 0
+
+        assert state.section(AddressBook).find("John") is not None
+        assert "Cancelled" in capsys.readouterr().out
+
+    def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "delete", "Nobody", "--force") == 1
+        assert "No contact named 'Nobody'" in capsys.readouterr().out
+
+    def test_the_name_is_matched_whatever_the_case(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "delete", "john", "--force") == 0
+        assert state.section(AddressBook).find("John") is None

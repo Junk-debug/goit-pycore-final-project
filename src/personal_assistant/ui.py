@@ -9,6 +9,7 @@ Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 
 from rich.console import Console
@@ -55,3 +56,26 @@ def table(
     for row in rows:
         built.add_row(*[str(cell) for cell in row])
     return built
+
+
+def confirm(question: str) -> bool:
+    """Ask the user to confirm a destructive action.
+
+    Answers no whenever an answer cannot be read: input that is not a terminal
+    (a piped or scripted run has nobody to say yes), and Ctrl-D or Ctrl-C at the
+    prompt itself. A destructive action must never go ahead by default; `--force`
+    is the way to mean it.
+    """
+    if not sys.stdin.isatty():
+        return False
+
+    prompt = Text(question)
+    prompt.append(" [y/N] ", style="bold yellow")
+    try:
+        # A Text object, not an f-string: `question` may hold arbitrary data,
+        # such as a contact name, and Console.input parses markup in a plain
+        # string by default — the same trap render() guards against.
+        answer = _console.input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer.strip().lower() in {"y", "yes"}
