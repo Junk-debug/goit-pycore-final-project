@@ -57,6 +57,8 @@ class Storage:
         if not isinstance(state, AppState):
             self._quarantine()
             return AppState.empty()
+
+        state.ensure_ready()
         return state
 
     def save(self, state: AppState) -> None:
