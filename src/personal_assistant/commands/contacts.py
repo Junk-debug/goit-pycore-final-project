@@ -145,6 +145,21 @@ def register(app: typer.Typer) -> None:
         ] = "",
     ) -> None:
         """change fields of an existing contact"""
+        # `email`, `address` and `birthday` default to None when omitted, so an
+        # empty string still counts as provided and clears the field. `add_phone`
+        # and `remove_phone` default to "" instead, since they are plain `str`,
+        # so a non-empty value is what counts as provided for them.
+        provided = (
+            new_name is not None,
+            email is not None,
+            address is not None,
+            birthday is not None,
+            bool(add_phone),
+            bool(remove_phone),
+        )
+        if not any(provided):
+            raise ValidationError("Nothing to change: pass at least one option.")
+
         book = ctx.obj.section(AddressBook)
         contact = required(ctx.obj, name)
 
