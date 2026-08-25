@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import pytest
 
+from personal_assistant import cli
+from personal_assistant.commands import build_parser, group_names
 from personal_assistant.errors import NotFoundError, ValidationError
 from personal_assistant.models.note import MAX_LENGTH, Note, NoteText
 from personal_assistant.models.note_book import NoteBook
 from personal_assistant.models.tag import Tag
+from personal_assistant.parser import ReplArgumentParser
 from personal_assistant.state import AppState
 from personal_assistant.storage import Storage
 
@@ -235,3 +238,158 @@ def test_the_notebook_survives_a_restart(tmp_path, book) -> None:
     restored = storage.load().section(NoteBook)
     assert restored[1].tag_names() == ["python", "study"]
     assert restored.add("written after the restart").id == 4
+
+
+@pytest.fixture
+def parser() -> ReplArgumentParser:
+    return build_parser()
+
+
+@pytest.fixture
+def state(book) -> AppState:
+    """An application state holding the three notes of the `book` fixture."""
+    prepared = AppState.empty()
+    prepared.section(NoteBook).update(book)
+    return prepared
+
+
+def run(parser, state, *argv) -> int:
+    """Run one command the way both interface modes do, and return its code."""
+    return cli.dispatch(parser, list(argv), state)
+
+
+def refuse(prompt: str = "") -> str:
+    """Stand in for a question nobody is there to answer."""
+    raise EOFError
+
+
+def test_the_note_group_is_registered(parser) -> None:
+    assert "note" in group_names()
+
+
+def test_the_group_on_its_own_shows_its_actions(parser, state, capsys) -> None:
+    assert run(parser, state, "note") == 0
+
+    printed = capsys.readouterr().out
+    assert "add" in printed and "delete" in printed
+
+
+def test_a_mistyped_action_is_answered_with_the_closest_one(
+    parser, state, capsys
+) -> None:
+    assert run(parser, state, "note", "lst") == 2
+    assert "Did you mean 'list'" in capsys.readouterr().out
+
+
+def test_a_note_is_written_and_reports_its_id(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "add", "Water the plants", "--tag", "Home") == 0
+
+    assert "Note 4 saved." in capsys.readouterr().out
+    assert state.section(NoteBook)[4].tag_names() == ["home"]
+
+
+def test_an_empty_note_is_refused_and_nothing_is_stored(parser, state) -> None:
+    assert run(parser, state, "note", "add", "   ") == 1
+    assert len(state.section(NoteBook)) == 3
+
+
+def test_an_invalid_tag_is_refused_and_nothing_is_stored(parser, state) -> None:
+    assert (
+        run(parser, state, "note", "add", "Water the plants", "--tag", "at home") == 1
+    )
+    assert len(state.section(NoteBook)) == 3
+
+
+def test_one_note_is_shown_with_its_tags(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "show", "1") == 0
+    assert "python, study" in capsys.readouterr().out
+
+
+def test_showing_an_unknown_note_is_reported(parser, state) -> None:
+    assert run(parser, state, "note", "show", "99") == 1
+
+
+def test_an_id_that_is_not_a_number_is_reported(parser, state) -> None:
+    assert run(parser, state, "note", "show", "abc") == 2
+
+
+def test_listing_shows_the_notes(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "list") == 0
+
+    printed = capsys.readouterr().out
+    assert "Ship the release" in printed and "Buy milk" in printed
+
+
+def test_listing_an_empty_notebook_says_so(parser, capsys) -> None:
+    assert run(parser, AppState.empty(), "note", "list") == 0
+    assert "no notes yet" in capsys.readouterr().out
+
+
+def test_the_tag_option_narrows_the_listing(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "list", "--tag", "work") == 0
+
+    printed = capsys.readouterr().out
+    assert "Ship the release" in printed and "Buy milk" not in printed
+
+
+def test_a_listing_that_matches_nothing_says_so(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "list", "--query", "kayak") == 0
+    assert "No note matches." in capsys.readouterr().out
+
+
+def test_an_unknown_sort_key_is_refused(parser, state) -> None:
+    assert run(parser, state, "note", "list", "--sort", "colour") == 2
+
+
+def test_the_text_of_a_note_is_replaced(parser, state) -> None:
+    assert run(parser, state, "note", "edit", "2", "--text", "Buy oat milk") == 0
+    assert state.section(NoteBook)[2].text.value == "Buy oat milk"
+
+
+def test_a_tag_is_replaced_in_one_invocation(parser, state) -> None:
+    arguments = ("note", "edit", "1", "--add-tag", "pickle", "--remove-tag", "study")
+
+    assert run(parser, state, *arguments) == 0
+    assert state.section(NoteBook)[1].tag_names() == ["pickle", "python"]
+
+
+def test_editing_nothing_is_reported(parser, state, capsys) -> None:
+    assert run(parser, state, "note", "edit", "1") == 1
+    assert "Nothing to change" in capsys.readouterr().out
+
+
+def test_editing_an_unknown_note_is_reported(parser, state) -> None:
+    assert run(parser, state, "note", "edit", "99", "--text", "Anything") == 1
+
+
+def test_a_note_is_deleted_without_a_question_when_forced(parser, state) -> None:
+    assert run(parser, state, "note", "delete", "3", "--force") == 0
+    assert 3 not in state.section(NoteBook)
+
+
+def test_a_note_is_deleted_when_the_question_is_answered(
+    parser, state, monkeypatch
+) -> None:
+    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+
+    assert run(parser, state, "note", "delete", "3") == 0
+    assert 3 not in state.section(NoteBook)
+
+
+def test_a_note_survives_an_answer_that_is_not_yes(parser, state, monkeypatch) -> None:
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")
+
+    assert run(parser, state, "note", "delete", "3") == 0
+    assert 3 in state.section(NoteBook)
+
+
+def test_a_note_survives_a_question_nobody_answers(parser, state, monkeypatch) -> None:
+    """A command that cannot ask must not destroy anything, or fail on it."""
+    monkeypatch.setattr("builtins.input", refuse)
+
+    assert run(parser, state, "note", "delete", "3") == 0
+    assert 3 in state.section(NoteBook)
+
+
+def test_deleting_an_unknown_note_is_reported(parser, state) -> None:
+    assert run(parser, state, "note", "delete", "99", "--force") == 1
