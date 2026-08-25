@@ -99,8 +99,9 @@ $ assistant contact add John --phone 123
 contact show <name>
 ```
 
-Prints one contact as a table, marking a field that is not set with a dash. The
-name is matched without regard to case.
+Prints one contact as a card, marking a field that is not set with a dash. The
+name is matched without regard to case. `contact add` and `contact edit` print
+the same card after they run, so the result of a change is always visible.
 
 ```bash
 assistant contact show John
@@ -116,7 +117,8 @@ contact edit <name> [--name <new>] [--email <email>] [--address <address>]
 
 Only the fields you pass are touched. An empty value clears an optional field;
 `--add-phone` and `--remove-phone` may be combined in one call to replace a
-number atomically.
+number atomically. At least one option is required — running `edit` with
+nothing to change is reported rather than silently doing nothing.
 
 ```bash
 assistant contact edit John --email new@example.com
