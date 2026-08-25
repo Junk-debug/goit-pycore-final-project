@@ -104,3 +104,17 @@ def test_the_loop_leaves_on_end_of_input(command, state, monkeypatch, capsys) ->
 
     assert cli.run_loop(command, state) == 0
     assert cli.FAREWELL in capsys.readouterr().out
+
+
+def test_a_confirmation_prompt_that_cannot_be_answered_declines(monkeypatch) -> None:
+    """Regression: EOFError from `console.input` used to leak past typer as
+    `Abort`, which our dispatcher did not recognise and re-raised, crashing the
+    whole session on Ctrl-D at a y/N prompt (criterion 11)."""
+    import sys
+
+    from personal_assistant import ui
+
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(ui._console, "input", lambda _: (_ for _ in ()).throw(EOFError))
+
+    assert ui.confirm("Delete it?") is False

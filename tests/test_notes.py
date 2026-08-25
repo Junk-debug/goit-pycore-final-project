@@ -7,11 +7,13 @@ error.
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 import typer
 from typer.core import TyperGroup
 
-from personal_assistant import cli
+from personal_assistant import cli, ui
 from personal_assistant.commands import build_app
 from personal_assistant.errors import NotFoundError, ValidationError
 from personal_assistant.models.note import MAX_LENGTH, Note, NoteText
@@ -261,9 +263,25 @@ def run(command, state, *argv) -> int:
     return cli.dispatch(command, list(argv), state)
 
 
-def refuse(prompt: str = "") -> str:
+def answer(monkeypatch, reply: str) -> None:
+    """Make the next confirmation prompt behave as though a terminal answered.
+
+    `ui.confirm` refuses outright when `sys.stdin` is not a terminal, which it
+    never is under pytest, so a real answer has to fake both that check and
+    the `Console.input` call behind it.
+    """
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(ui._console, "input", lambda prompt: reply)
+
+
+def refuse(monkeypatch) -> None:
     """Stand in for a question nobody is there to answer."""
-    raise EOFError
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
+    def raise_eof(prompt: object) -> str:
+        raise EOFError
+
+    monkeypatch.setattr(ui._console, "input", raise_eof)
 
 
 def test_the_note_group_is_registered(command) -> None:
@@ -388,14 +406,14 @@ def test_a_note_is_deleted_without_a_question_when_forced(command, state) -> Non
 def test_a_note_is_deleted_when_the_question_is_answered(
     command, state, monkeypatch
 ) -> None:
-    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+    answer(monkeypatch, "y")
 
     assert run(command, state, "note", "delete", "3") == 0
     assert 3 not in state.section(NoteBook)
 
 
 def test_a_note_survives_an_answer_that_is_not_yes(command, state, monkeypatch) -> None:
-    monkeypatch.setattr("builtins.input", lambda prompt="": "")
+    answer(monkeypatch, "")
 
     assert run(command, state, "note", "delete", "3") == 0
     assert 3 in state.section(NoteBook)
@@ -403,8 +421,14 @@ def test_a_note_survives_an_answer_that_is_not_yes(command, state, monkeypatch) 
 
 def test_a_note_survives_a_question_nobody_answers(command, state, monkeypatch) -> None:
     """A command that cannot ask must not destroy anything, or fail on it."""
-    monkeypatch.setattr("builtins.input", refuse)
+    refuse(monkeypatch)
 
+    assert run(command, state, "note", "delete", "3") == 0
+    assert 3 in state.section(NoteBook)
+
+
+def test_without_a_terminal_a_note_is_kept_by_default(command, state) -> None:
+    """`sys.stdin.isatty()` is False under pytest, matching a piped run."""
     assert run(command, state, "note", "delete", "3") == 0
     assert 3 in state.section(NoteBook)
 

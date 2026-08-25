@@ -1,45 +1,37 @@
 """Presentation layer.
 
-Every handler returns data and never prints. This module is the only place
-that writes to the terminal, which keeps the domain free of formatting and
-lets the planned web interface reuse the same handlers (D8). The one thing a
-handler may ask for is a confirmation, and it asks for it here rather than
-reading the keyboard itself, for exactly the same reason.
+The only module that writes to the terminal. Commands decide what to say,
+this module decides how it looks, which keeps formatting out of the domain
+and out of the command bodies; it is also what lets the planned web interface
+reuse the same commands unchanged (D8).
 
-`rich` is optional by D21: when it is unavailable the same calls fall back to
-plain printing, so a missing package costs appearance, never function.
+Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 """
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 from personal_assistant.types import Renderable
 
-if TYPE_CHECKING:
-    from rich.table import Table
+_console = Console()
 
-try:
-    from rich import box
-    from rich.console import Console
-    from rich.table import Table
-    from rich.text import Text
-
-    _console: Console | None = Console()
-except ImportError:  # pragma: no cover - exercised only without rich
-    _console = None
-
-QUESTION_SUFFIX = "[y/N]"
-AGREEMENT = ("y", "yes")
+DASH = "—"
 
 
 @dataclass(frozen=True)
 class Column:
     """How one column of a table is presented.
 
-    A handler describes its columns instead of formatting them itself, so
+    A command describes its columns instead of formatting them itself, so
     every table in the assistant is built the same way and the decisions that
     depend on the terminal stay in this module.
     """
@@ -51,18 +43,15 @@ class Column:
 
 
 def render(result: Renderable) -> None:
-    """Print whatever a handler returned.
+    """Print a line of text, a table, or a card.
 
-    Plain strings are printed verbatim: `rich` would otherwise read square
-    brackets as its own markup and colour arbitrary tokens on its own, which
-    mangles pre-formatted text such as the output of `--help`. Objects built
-    by this module, tables among them, are rendered normally.
+    A plain string is printed verbatim, because `rich` would otherwise read
+    square brackets as its own markup and colour arbitrary words on its own,
+    which mangles pre-formatted text such as the output of `--help`.
     """
     if result is None:
         return
-    if _console is None:
-        print(result)
-    elif isinstance(result, str):
+    if isinstance(result, str):
         _console.print(result, markup=False, highlight=False)
     else:
         _console.print(result)
@@ -70,40 +59,34 @@ def render(result: Renderable) -> None:
 
 def success(message: str) -> None:
     """Report a completed action."""
-    _styled(message, "green")
+    _console.print(Text(message, style="green"))
 
 
 def failure(message: str) -> None:
     """Report an expected error, such as invalid input."""
-    _styled(message, "red")
-
-
-def _styled(message: str, colour: str) -> None:
-    """Print a whole message in one colour, never parsing its content."""
-    if _console is None:
-        print(message)
-        return
-    _console.print(Text(message, style=colour))
+    _console.print(Text(message, style="red"))
 
 
 def table(
     title: str,
     columns: Sequence[Column | str],
     rows: Sequence[Sequence[object]],
-) -> Renderable:
-    """Build a table for a handler to return, or plain text without rich."""
+) -> Table:
+    """Build a table for a command to hand to `render`.
+
+    A bare string stands for a column with no particular style, which keeps a
+    simple listing simple to write; `Column` is there for one that needs a
+    style, a fixed width or control over wrapping, as `note list` does.
+    """
     described = [
         column if isinstance(column, Column) else Column(column) for column in columns
     ]
-    if _console is None:
-        return _plain(title, [column.header for column in described], rows)
-
     built = Table(
         title=title,
         box=box.ROUNDED,
         title_justify="left",
         title_style="bold",
-        header_style="bold",
+        header_style="bold cyan",
     )
     for column in described:
         built.add_column(
@@ -118,16 +101,13 @@ def table(
     return built
 
 
-def details(title: str, fields: Sequence[tuple[str, object]]) -> Renderable:
-    """Show one record field by field, for the `show` commands.
+def details(title: str, fields: Sequence[tuple[str, object]]) -> Table:
+    """Show one record field by field, for a `show` command.
 
     A single record has a handful of long values rather than many short ones,
-    so it reads better down the page than across a table, and the frame around
-    it would carry no information.
+    so it reads better down the page than across a table, and the frame
+    around it would carry no information.
     """
-    if _console is None:
-        return "\n".join([title, *(f"{name}: {value}" for name, value in fields)])
-
     built = Table(
         title=title,
         box=None,
@@ -143,22 +123,44 @@ def details(title: str, fields: Sequence[tuple[str, object]]) -> Renderable:
     return built
 
 
-def confirm(question: str) -> bool:
-    """Ask before something irreversible happens, as section 7.1 requires.
+def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
+    """Build a labelled panel for a single record, such as one contact.
 
-    The default is no: an empty answer, an unreadable input or an interrupted
-    one all leave the data alone, so nothing is destroyed by a stray Enter
-    and a command that cannot ask never fails on it either.
+    A record is a handful of "label: value" pairs, not a set of rows to
+    compare against each other, so it is framed once with its own name in the
+    border rather than drawn as a table with a repeated title and column
+    headers. A field that is not set is shown as a dash.
+
+    Built on a borderless `Table.grid` rather than plain lines of text: a long
+    value that wraps then continues under the value column instead of running
+    back under the label, which a hand-built line of text cannot do on its own.
     """
-    try:
-        answer = input(f"{question} {QUESTION_SUFFIX} ")
-    except (EOFError, KeyboardInterrupt, OSError):
+    grid = Table.grid(padding=(0, 2, 0, 0))
+    grid.add_column(style="bold cyan", no_wrap=True)
+    grid.add_column()
+    for label, value in fields:
+        grid.add_row(label, value if value else DASH)
+    return Panel(grid, title=title, title_align="left", expand=False)
+
+
+def confirm(question: str) -> bool:
+    """Ask the user to confirm a destructive action (section 7.1).
+
+    Answers no whenever an answer cannot be read: input that is not a
+    terminal (a piped or scripted run has nobody to say yes), and Ctrl-D or
+    Ctrl-C at the prompt itself. A destructive action must never go ahead by
+    default; `--force` is the way to mean it.
+    """
+    if not sys.stdin.isatty():
         return False
-    return answer.strip().lower() in AGREEMENT
 
-
-def _plain(title: str, headers: Sequence[str], rows: Sequence[Sequence[object]]) -> str:
-    """The same table as text, for a terminal without rich."""
-    header = " | ".join(headers)
-    body = "\n".join(" | ".join(str(cell) for cell in row) for row in rows)
-    return f"{title}\n{header}\n{body}" if rows else f"{title}\n{header}"
+    prompt = Text(question)
+    prompt.append(" [y/N] ", style="bold yellow")
+    try:
+        # A Text object, not an f-string: `question` may hold arbitrary data,
+        # such as a note's preview, and Console.input parses markup in a plain
+        # string by default — the same trap render() guards against.
+        answer = _console.input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer.strip().lower() in {"y", "yes"}
