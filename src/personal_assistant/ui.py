@@ -13,7 +13,8 @@ import sys
 from collections.abc import Sequence
 
 from rich import box
-from rich.console import Console
+from rich.console import Console, Group
+from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
@@ -85,3 +86,21 @@ def confirm(question: str) -> bool:
     except (EOFError, KeyboardInterrupt):
         return False
     return answer.strip().lower() in {"y", "yes"}
+
+
+def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
+    """Build a labelled panel for a single record, such as one contact.
+
+    A record is a handful of "label: value" pairs, not a set of rows to
+    compare against each other, so it is framed once with its own name in the
+    border rather than drawn as a table with a repeated title and column
+    headers. A field that is not set is shown as a dash.
+    """
+    width = max(len(label) for label, _ in fields)
+    lines = []
+    for label, value in fields:
+        line = Text()
+        line.append(f"{label:>{width}}  ", style="bold cyan")
+        line.append(value if value else "—")
+        lines.append(line)
+    return Panel(Group(*lines), title=title, title_align="left", expand=False)

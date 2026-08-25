@@ -13,8 +13,6 @@ from personal_assistant.models.contact import Contact
 from personal_assistant.state import AppState
 from personal_assistant.values import commas
 
-EMPTY = "—"
-
 
 def register(app: typer.Typer) -> None:
     """Add the contact commands to the command tree."""
@@ -72,13 +70,13 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """print one contact in full"""
         contact = required(ctx.obj, name)
-        rows = [
-            ("Phones", ", ".join(str(phone) for phone in contact.phones) or EMPTY),
-            ("Email", str(contact.email) if contact.email else EMPTY),
-            ("Address", str(contact.address) if contact.address else EMPTY),
-            ("Birthday", str(contact.birthday) if contact.birthday else EMPTY),
+        fields = [
+            ("Phones", ", ".join(str(phone) for phone in contact.phones) or None),
+            ("Email", str(contact.email) if contact.email else None),
+            ("Address", str(contact.address) if contact.address else None),
+            ("Birthday", str(contact.birthday) if contact.birthday else None),
         ]
-        ui.render(ui.table(str(contact.name), ("Field", "Value"), rows))
+        ui.render(ui.card(str(contact.name), fields))
 
     @contacts.command("delete")
     def delete_contact(
