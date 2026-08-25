@@ -12,6 +12,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Sequence
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -50,9 +51,14 @@ def table(
     title: str, columns: Sequence[str], rows: Sequence[Sequence[object]]
 ) -> Table:
     """Build a table for a command to hand to `render`."""
-    built = Table(title=title)
-    for column in columns:
-        built.add_column(column)
+    built = Table(
+        title=title, box=box.ROUNDED, header_style="bold cyan", title_style="bold"
+    )
+    for index, column in enumerate(columns):
+        # The first column holds the label of each row (a field name, a
+        # contact's name); bolding it reads as a key, not as emphasis on some
+        # rows over others the way alternating row colours would.
+        built.add_column(column, style="bold" if index == 0 else None)
     for row in rows:
         built.add_row(*[str(cell) for cell in row])
     return built
