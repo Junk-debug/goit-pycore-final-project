@@ -10,12 +10,12 @@ from personal_assistant.models.name import Name
 from personal_assistant.models.phone import Phone
 
 
-class Record:
+class Contact:
     """One contact, composed of validated fields.
 
-    The record holds several phone numbers and at most one email, address and
+    The contact holds several phone numbers and at most one email, address and
     birthday, as decided in D15. It never validates anything itself: each field
-    class does that when it is constructed, so a record can only ever be built
+    class does that when it is constructed, so a contact can only ever be built
     from valid values.
     """
 
@@ -27,7 +27,7 @@ class Record:
         self.birthday: Birthday | None = None
 
     def add_phone(self, raw: str) -> Phone:
-        """Add a phone number, refusing one the record already holds."""
+        """Add a phone number, refusing one the contact already holds."""
         phone = Phone(raw)
         if phone in self.phones:
             raise ValidationError(f"{self.name} already has the number {phone}.")
@@ -56,4 +56,4 @@ class Record:
         return "; ".join(parts)
 
     def __repr__(self) -> str:
-        return f"Record({self.name.value!r})"
+        return f"Contact({self.name.value!r})"
