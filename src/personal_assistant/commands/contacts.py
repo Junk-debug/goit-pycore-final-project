@@ -59,7 +59,8 @@ def register(app: typer.Typer) -> None:
             contact.set_birthday(birthday)
 
         book.add(contact)
-        ui.success(f"Added {contact}.")
+        ui.success(f"Added {contact.name}.")
+        ui.render(ui.card(str(contact.name), _fields(contact)))
 
     @contacts.command("show")
     def show_contact(
@@ -70,13 +71,7 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """print one contact in full"""
         contact = required(ctx.obj, name)
-        fields = [
-            ("Phones", ", ".join(str(phone) for phone in contact.phones) or None),
-            ("Email", str(contact.email) if contact.email else None),
-            ("Address", str(contact.address) if contact.address else None),
-            ("Birthday", str(contact.birthday) if contact.birthday else None),
-        ]
-        ui.render(ui.card(str(contact.name), fields))
+        ui.render(ui.card(str(contact.name), _fields(contact)))
 
     @contacts.command("delete")
     def delete_contact(
@@ -177,7 +172,18 @@ def register(app: typer.Typer) -> None:
         if new_name is not None:
             book.rename(contact, new_name)
 
-        ui.success(f"Updated {contact}.")
+        ui.success(f"Updated {contact.name}.")
+        ui.render(ui.card(str(contact.name), _fields(contact)))
+
+
+def _fields(contact: Contact) -> list[tuple[str, str | None]]:
+    """The fields of a contact, as shown by `add`, `show` and `edit` alike."""
+    return [
+        ("Phones", ", ".join(str(phone) for phone in contact.phones) or None),
+        ("Email", str(contact.email) if contact.email else None),
+        ("Address", str(contact.address) if contact.address else None),
+        ("Birthday", str(contact.birthday) if contact.birthday else None),
+    ]
 
 
 def required(state: AppState, name: str) -> Contact:

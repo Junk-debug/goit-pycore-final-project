@@ -13,7 +13,7 @@ import sys
 from collections.abc import Sequence
 
 from rich import box
-from rich.console import Console, Group
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -95,12 +95,14 @@ def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
     compare against each other, so it is framed once with its own name in the
     border rather than drawn as a table with a repeated title and column
     headers. A field that is not set is shown as a dash.
+
+    Built on a borderless `Table.grid` rather than plain lines of text: a long
+    value that wraps then continues under the value column instead of running
+    back under the label, which a hand-built line of text cannot do on its own.
     """
-    width = max(len(label) for label, _ in fields)
-    lines = []
+    grid = Table.grid(padding=(0, 2, 0, 0))
+    grid.add_column(style="bold cyan", no_wrap=True)
+    grid.add_column()
     for label, value in fields:
-        line = Text()
-        line.append(f"{label:<{width}}  ", style="bold cyan")
-        line.append(value if value else "—")
-        lines.append(line)
-    return Panel(Group(*lines), title=title, title_align="left", expand=False)
+        grid.add_row(label, value if value else "—")
+    return Panel(grid, title=title, title_align="left", expand=False)
