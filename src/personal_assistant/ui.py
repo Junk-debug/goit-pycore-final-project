@@ -101,28 +101,6 @@ def table(
     return built
 
 
-def details(title: str, fields: Sequence[tuple[str, object]]) -> Table:
-    """Show one record field by field, for a `show` command.
-
-    A single record has a handful of long values rather than many short ones,
-    so it reads better down the page than across a table, and the frame
-    around it would carry no information.
-    """
-    built = Table(
-        title=title,
-        box=None,
-        show_header=False,
-        title_justify="left",
-        title_style="bold",
-        pad_edge=False,
-    )
-    built.add_column(style="bold cyan", no_wrap=True)
-    built.add_column(overflow="fold")
-    for name, value in fields:
-        built.add_row(name, str(value))
-    return built
-
-
 def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
     """Build a labelled panel for a single record, such as one contact.
 

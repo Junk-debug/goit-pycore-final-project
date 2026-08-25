@@ -185,11 +185,12 @@ note edit <id> [--text <text>] [--add-tag <tag>...] [--remove-tag <tag>...]
 note delete <id> [--force]
 ```
 
-`note show` prints one note with its tags and timestamps. `note edit` changes
-what the options name and nothing else, so adding and removing a tag in one
-call replaces it. `note delete` asks for confirmation unless `--force` is
-given, or the input is not a terminal — a piped or scripted run never deletes
-anything by default.
+`note show` prints one note as a card, marking a note with no tags with a
+dash. `note edit` changes what the options name and nothing else, so adding
+and removing a tag in one call replaces it, and prints the same card after it
+runs, so the result of a change is always visible. `note delete` asks for
+confirmation unless `--force` is given, or the input is not a terminal — a
+piped or scripted run never deletes anything by default.
 
 ```bash
 assistant note show 3

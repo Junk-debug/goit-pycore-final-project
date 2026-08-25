@@ -341,6 +341,11 @@ def test_one_note_is_shown_with_its_tags(command, state, capsys) -> None:
     assert "python, study" in capsys.readouterr().out
 
 
+def test_a_note_without_tags_shows_a_dash(command, state, capsys) -> None:
+    assert run(command, state, "note", "show", "2") == 0
+    assert "—" in capsys.readouterr().out
+
+
 def test_showing_an_unknown_note_is_reported(command, state) -> None:
     assert run(command, state, "note", "show", "99") == 1
 
@@ -377,16 +382,18 @@ def test_an_unknown_sort_key_is_refused(command, state) -> None:
     assert run(command, state, "note", "list", "--sort", "colour") == 2
 
 
-def test_the_text_of_a_note_is_replaced(command, state) -> None:
+def test_the_text_of_a_note_is_replaced(command, state, capsys) -> None:
     assert run(command, state, "note", "edit", "2", "--text", "Buy oat milk") == 0
     assert state.section(NoteBook)[2].text.value == "Buy oat milk"
+    assert "Buy oat milk" in capsys.readouterr().out
 
 
-def test_a_tag_is_replaced_in_one_invocation(command, state) -> None:
+def test_a_tag_is_replaced_in_one_invocation(command, state, capsys) -> None:
     arguments = ("note", "edit", "1", "--add-tag", "pickle", "--remove-tag", "study")
 
     assert run(command, state, *arguments) == 0
     assert state.section(NoteBook)[1].tag_names() == ["pickle", "python"]
+    assert "pickle, python" in capsys.readouterr().out
 
 
 def test_editing_nothing_is_reported(command, state, capsys) -> None:
