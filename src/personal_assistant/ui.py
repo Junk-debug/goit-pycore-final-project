@@ -16,6 +16,7 @@ from typing import Any
 try:
     from rich.console import Console
     from rich.table import Table
+    from rich.text import Text
 
     _console: Console | None = Console()
 except ImportError:  # pragma: no cover - exercised only without rich
@@ -23,29 +24,39 @@ except ImportError:  # pragma: no cover - exercised only without rich
 
 
 def render(result: Any) -> None:
-    """Print whatever a handler returned."""
+    """Print whatever a handler returned.
+
+    Plain strings are printed verbatim: `rich` would otherwise read square
+    brackets as its own markup and colour arbitrary tokens on its own, which
+    mangles pre-formatted text such as the output of `--help`. Objects built
+    by this module, tables among them, are rendered normally.
+    """
     if result is None:
         return
-    if _console is not None:
-        _console.print(result)
-    else:
+    if _console is None:
         print(result)
+    elif isinstance(result, str):
+        _console.print(result, markup=False, highlight=False)
+    else:
+        _console.print(result)
 
 
 def success(message: str) -> None:
     """Report a completed action."""
-    if _console is not None:
-        _console.print(f"[green]{message}[/green]")
-    else:
-        print(message)
+    _styled(message, "green")
 
 
 def failure(message: str) -> None:
     """Report an expected error, such as invalid input."""
-    if _console is not None:
-        _console.print(f"[red]{message}[/red]")
-    else:
+    _styled(message, "red")
+
+
+def _styled(message: str, colour: str) -> None:
+    """Print a whole message in one colour, never parsing its content."""
+    if _console is None:
         print(message)
+        return
+    _console.print(Text(message, style=colour))
 
 
 def table(title: str, columns: Sequence[str], rows: Sequence[Sequence[str]]) -> Any:
