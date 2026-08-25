@@ -10,7 +10,7 @@ keeps the developers of different groups out of each other's way.
 
 A handler has the signature
 
-    handler(args: argparse.Namespace, state: AppState) -> Any
+    handler(args: argparse.Namespace, state: AppState) -> Renderable
 
 and returns what should be shown, or None. Handlers never print: the value
 they return is rendered by `personal_assistant.ui`, so the same handlers can
@@ -24,11 +24,12 @@ import importlib
 from types import ModuleType
 
 from personal_assistant.parser import ReplArgumentParser
+from personal_assistant.types import SubParsers
 
 GROUP_MODULES = ("common", "contacts", "notes")
 
 _root: ReplArgumentParser | None = None
-_groups: argparse._SubParsersAction | None = None
+_groups: SubParsers | None = None
 
 DESCRIPTION = "Personal assistant: an address book and notes."
 EPILOG = "Run without arguments to start the interactive session."

@@ -11,7 +11,12 @@ plain printing, so a missing package costs appearance, never function.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING
+
+from personal_assistant.types import Renderable
+
+if TYPE_CHECKING:
+    from rich.table import Table
 
 try:
     from rich.console import Console
@@ -23,7 +28,7 @@ except ImportError:  # pragma: no cover - exercised only without rich
     _console = None
 
 
-def render(result: Any) -> None:
+def render(result: Renderable) -> None:
     """Print whatever a handler returned.
 
     Plain strings are printed verbatim: `rich` would otherwise read square
@@ -59,7 +64,9 @@ def _styled(message: str, colour: str) -> None:
     _console.print(Text(message, style=colour))
 
 
-def table(title: str, columns: Sequence[str], rows: Sequence[Sequence[str]]) -> Any:
+def table(
+    title: str, columns: Sequence[str], rows: Sequence[Sequence[object]]
+) -> Renderable:
     """Build a table for a handler to return, or plain text without rich."""
     if _console is not None:
         built = Table(title=title)

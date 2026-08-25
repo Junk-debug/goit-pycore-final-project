@@ -21,6 +21,7 @@ from personal_assistant.errors import AssistantError, CommandError, ExitLoop
 from personal_assistant.parser import ReplArgumentParser
 from personal_assistant.state import AppState
 from personal_assistant.storage import Storage
+from personal_assistant.types import Handler
 
 PROMPT = "assistant> "
 WELCOME = "Personal assistant. Type 'help' to see the commands, 'exit' to leave."
@@ -43,7 +44,7 @@ def dispatch(parser: ReplArgumentParser, argv: list[str], state: AppState) -> in
         ui.failure(message)
         return 2
 
-    handler: Callable | None = getattr(args, "handler", None)
+    handler: Handler | None = getattr(args, "handler", None)
     if handler is None:
         ui.failure(parser.format_usage().strip())
         return 2
@@ -81,7 +82,9 @@ def _make_reader() -> Callable[[], str]:
     except ImportError:
         pass
 
-    session = PromptSession(history=InMemoryHistory(), completer=completer)
+    session: PromptSession[str] = PromptSession(
+        history=InMemoryHistory(), completer=completer
+    )
     return lambda: session.prompt(PROMPT)
 
 
