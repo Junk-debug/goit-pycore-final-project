@@ -5,6 +5,7 @@ description = "Personal assistant with a command-line interface: contacts and no
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "typer>=0.12",
     "rich>=13",
     "prompt_toolkit>=3",
 ]
