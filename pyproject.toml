@@ -50,8 +50,3 @@ strict = true
 module = ["tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-# The completion module does not exist yet.
-module = ["personal_assistant.completion"]
-ignore_missing_imports = true

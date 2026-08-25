@@ -77,7 +77,7 @@ def _feed(monkeypatch, lines) -> None:
             raise EOFError
         return remaining.pop(0)
 
-    monkeypatch.setattr(cli, "_make_reader", lambda: read)
+    monkeypatch.setattr(cli, "_make_reader", lambda state: read)
 
 
 def test_the_loop_runs_until_the_exit_command(

@@ -57,7 +57,7 @@ def dispatch(parser: ReplArgumentParser, argv: list[str], state: AppState) -> in
     return 0
 
 
-def _make_reader() -> Callable[[], str]:
+def _make_reader(state: AppState) -> Callable[[], str]:
     """Return a function that reads one line from the user.
 
     Uses `prompt_toolkit` for completion and history when it is installed and
@@ -78,7 +78,7 @@ def _make_reader() -> Callable[[], str]:
     try:
         from personal_assistant.completion import build_completer
 
-        completer = build_completer()
+        completer = build_completer(state)
     except ImportError:
         pass
 
@@ -90,7 +90,7 @@ def _make_reader() -> Callable[[], str]:
 
 def run_loop(parser: ReplArgumentParser, state: AppState) -> int:
     """Read commands until the user leaves (criterion 8)."""
-    read = _make_reader()
+    read = _make_reader(state)
     ui.render(WELCOME)
 
     while True:
