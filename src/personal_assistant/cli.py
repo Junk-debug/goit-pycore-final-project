@@ -26,6 +26,10 @@ from personal_assistant.state import AppState
 from personal_assistant.storage import Storage
 
 PROMPT = "assistant> "
+# Bold cyan, reset after: the same escape sequence works whether it reaches
+# the terminal through the plain `input` fallback or through prompt_toolkit,
+# which renders raw ANSI codes wrapped in `ANSI(...)` as-is.
+PROMPT_DISPLAY = f"\033[1;36m{PROMPT}\033[0m"
 WELCOME = "Personal assistant. Type 'help' to see the commands, 'exit' to leave."
 FAREWELL = "Good bye!"
 PROGRAM = "assistant"
@@ -74,7 +78,9 @@ def _make_reader(command: TyperGroup, state: AppState) -> Callable[[], str]:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.history import InMemoryHistory
     except ImportError:
-        return lambda: input(PROMPT)
+        return lambda: input(PROMPT_DISPLAY)
+
+    from prompt_toolkit.formatted_text import ANSI
 
     completer = None
     try:
@@ -87,7 +93,7 @@ def _make_reader(command: TyperGroup, state: AppState) -> Callable[[], str]:
     session: PromptSession[str] = PromptSession(
         history=InMemoryHistory(), completer=completer
     )
-    return lambda: session.prompt(PROMPT)
+    return lambda: session.prompt(ANSI(PROMPT_DISPLAY))
 
 
 def run_loop(command: TyperGroup, state: AppState) -> int:
