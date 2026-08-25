@@ -10,10 +10,10 @@ from personal_assistant.errors import ValidationError
 from personal_assistant.models.address import Address
 from personal_assistant.models.address_book import AddressBook
 from personal_assistant.models.birthday import Birthday
+from personal_assistant.models.contact import Contact
 from personal_assistant.models.email import Email
 from personal_assistant.models.name import Name
 from personal_assistant.models.phone import Phone
-from personal_assistant.models.record import Record
 
 
 class TestName:
@@ -117,47 +117,47 @@ class TestBirthday:
             Birthday("01.01.1899")
 
 
-class TestRecord:
-    def test_a_record_starts_with_only_a_name(self) -> None:
-        record = Record("John")
+class TestContact:
+    def test_a_contact_starts_with_only_a_name(self) -> None:
+        contact = Contact("John")
 
-        assert str(record.name) == "John"
-        assert record.phones == []
-        assert record.email is None
-        assert record.address is None
-        assert record.birthday is None
+        assert str(contact.name) == "John"
+        assert contact.phones == []
+        assert contact.email is None
+        assert contact.address is None
+        assert contact.birthday is None
 
     def test_several_phones_are_kept(self) -> None:
-        record = Record("John")
-        record.add_phone("+48111222333")
-        record.add_phone("+48999888777")
+        contact = Contact("John")
+        contact.add_phone("+48111222333")
+        contact.add_phone("+48999888777")
 
-        assert [str(phone) for phone in record.phones] == [
+        assert [str(phone) for phone in contact.phones] == [
             "+48111222333",
             "+48999888777",
         ]
 
     def test_the_same_number_is_not_added_twice(self) -> None:
-        record = Record("John")
-        record.add_phone("+48111222333")
+        contact = Contact("John")
+        contact.add_phone("+48111222333")
 
         with pytest.raises(ValidationError):
-            record.add_phone("+48 111 222 333")
+            contact.add_phone("+48 111 222 333")
 
-    def test_an_invalid_value_leaves_the_record_untouched(self) -> None:
-        record = Record("John")
+    def test_an_invalid_value_leaves_the_contact_untouched(self) -> None:
+        contact = Contact("John")
 
         with pytest.raises(ValidationError):
-            record.set_email("not-an-email")
+            contact.set_email("not-an-email")
 
-        assert record.email is None
+        assert contact.email is None
 
     def test_the_text_form_lists_the_fields_that_are_set(self) -> None:
-        record = Record("John")
-        record.add_phone("+48111222333")
-        record.set_email("john@example.com")
+        contact = Contact("John")
+        contact.add_phone("+48111222333")
+        contact.set_email("john@example.com")
 
-        shown = str(record)
+        shown = str(contact)
         assert "John" in shown
         assert "+48111222333" in shown
         assert "john@example.com" in shown
@@ -165,24 +165,24 @@ class TestRecord:
 
 
 class TestAddressBook:
-    def test_a_record_is_found_by_its_name(self) -> None:
+    def test_a_contact_is_found_by_its_name(self) -> None:
         book = AddressBook()
-        book.add_record(Record("John"))
+        book.add(Contact("John"))
 
         found = book.find("John")
         assert found is not None
         assert str(found.name) == "John"
 
-    def test_a_record_is_found_whatever_the_case(self) -> None:
+    def test_a_contact_is_found_whatever_the_case(self) -> None:
         book = AddressBook()
-        book.add_record(Record("John"))
+        book.add(Contact("John"))
 
         assert book.find("john") is not None
         assert book.find("JOHN") is not None
 
     def test_the_spelling_that_was_entered_is_the_one_kept(self) -> None:
         book = AddressBook()
-        book.add_record(Record("John"))
+        book.add(Contact("John"))
 
         found = book.find("john")
         assert found is not None
@@ -191,9 +191,9 @@ class TestAddressBook:
     def test_an_unknown_name_returns_nothing(self) -> None:
         assert AddressBook().find("Nobody") is None
 
-    def test_deleting_reports_whether_a_record_was_there(self) -> None:
+    def test_deleting_reports_whether_a_contact_was_there(self) -> None:
         book = AddressBook()
-        book.add_record(Record("John"))
+        book.add(Contact("John"))
 
         assert book.delete("john") is True
         assert book.delete("john") is False
