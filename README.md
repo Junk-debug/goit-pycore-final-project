@@ -56,6 +56,7 @@ action does not require.
 | `help <command>...` | Explain one command, for example `help contact add` |
 | `contact add <name> [options]` | Create a contact |
 | `contact show <name>` | Print one contact with all of its fields |
+| `contact list [options]` | List and filter contacts |
 | `contact edit <name> [options]` | Change fields of an existing contact |
 | `contact delete <name>` | Remove a contact |
 | `note add <text> [options]` | Write a note |
@@ -110,6 +111,27 @@ the same card after they run, so the result of a change is always visible.
 
 ```bash
 assistant contact show John
+```
+
+### `contact list`
+
+```
+contact list [--query <text>] [--birthday-in <days>] [--sort name|birthday]
+```
+
+Without options, lists every contact as a table. `--query` keeps contacts
+whose name, any phone number, email or address contains the given text,
+ignoring case. `--birthday-in` keeps contacts whose birthday falls within
+that many days from today, and adds a "Greet on" column: the date the
+birthday is next celebrated, moved to the following Monday when it would
+otherwise land on a Saturday or Sunday. `--sort` orders the results by name
+or by that same upcoming date, with contacts that have no birthday sorted
+last.
+
+```bash
+assistant contact list
+assistant contact list --query kowal
+assistant contact list --birthday-in 7 --sort birthday
 ```
 
 ### `contact edit`

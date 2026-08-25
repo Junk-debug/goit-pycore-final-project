@@ -52,6 +52,14 @@ class Contact:
     def rename(self, raw: str) -> None:
         self.name = Name(raw)
 
+    def matches(self, query: str) -> bool:
+        """Whether `query` is a substring of the name, a phone, the email or
+        the address, ignoring case, as required by C2."""
+        query = query.casefold()
+        haystacks = [str(self.name), str(self.email or ""), str(self.address or "")]
+        haystacks.extend(str(phone) for phone in self.phones)
+        return any(query in haystack.casefold() for haystack in haystacks)
+
     def set_email(self, raw: str | None) -> None:
         """Set the email, or clear it when given nothing."""
         self.email = Email(raw) if raw else None

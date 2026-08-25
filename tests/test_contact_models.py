@@ -117,6 +117,62 @@ class TestBirthday:
             Birthday("01.01.1899")
 
 
+class TestNextGreeting:
+    def test_a_birthday_later_this_year_is_celebrated_this_year(self) -> None:
+        # 12 May 2026 is a Tuesday, so no weekend shift applies.
+        today = date(2026, 1, 1)
+        birthday = Birthday("12.05.1998")
+
+        assert birthday.next_greeting(today) == date(2026, 5, 12)
+
+    def test_a_birthday_already_passed_this_year_rolls_to_next_year(self) -> None:
+        # 12 May 2027 is a Wednesday, so no weekend shift applies.
+        today = date(2026, 8, 25)
+        birthday = Birthday("12.05.1998")
+
+        assert birthday.next_greeting(today) == date(2027, 5, 12)
+
+    def test_today_counts_as_the_next_occurrence(self) -> None:
+        today = date(2026, 8, 25)
+        birthday = Birthday("25.08.1998")
+
+        assert birthday.next_greeting(today) == today
+
+    def test_a_29_february_is_celebrated_on_1_march_in_a_non_leap_year(self) -> None:
+        # 1 March 2029 is a Thursday, so no weekend shift applies.
+        today = date(2029, 1, 1)
+        birthday = Birthday("29.02.2000")
+
+        assert birthday.next_greeting(today) == date(2029, 3, 1)
+
+    def test_a_29_february_is_kept_in_a_leap_year(self) -> None:
+        today = date(2027, 12, 1)
+        birthday = Birthday("29.02.2000")
+
+        assert birthday.next_greeting(today) == date(2028, 2, 29)
+
+    @pytest.mark.parametrize(
+        ("raw_birthday", "today", "greeting"),
+        [
+            # Saturday 8 August 2026 -> Monday 10 August 2026
+            ("08.08.1990", date(2026, 8, 1), date(2026, 8, 10)),
+            # Sunday 9 August 2026 -> Monday 10 August 2026
+            ("09.08.1990", date(2026, 8, 1), date(2026, 8, 10)),
+        ],
+    )
+    def test_a_weekend_birthday_is_greeted_the_following_monday(
+        self, raw_birthday: str, today: date, greeting: date
+    ) -> None:
+        assert Birthday(raw_birthday).next_greeting(today) == greeting
+
+    def test_a_weekday_birthday_is_not_shifted(self) -> None:
+        today = date(2026, 8, 1)
+        # Wednesday 12 August 2026.
+        birthday = Birthday("12.08.1990")
+
+        assert birthday.next_greeting(today) == date(2026, 8, 12)
+
+
 class TestContact:
     def test_a_contact_starts_with_only_a_name(self) -> None:
         contact = Contact("John")
@@ -162,6 +218,46 @@ class TestContact:
         assert "+48111222333" in shown
         assert "john@example.com" in shown
         assert "address" not in shown
+
+
+class TestMatches:
+    def test_a_substring_of_the_name_matches(self) -> None:
+        contact = Contact("Anna Kowalska")
+
+        assert contact.matches("kowal")
+
+    def test_matching_ignores_case(self) -> None:
+        contact = Contact("Anna Kowalska")
+
+        assert contact.matches("KOWALSKA")
+
+    def test_a_substring_of_a_phone_matches(self) -> None:
+        contact = Contact("John")
+        contact.add_phone("+48123456789")
+
+        assert contact.matches("123456")
+
+    def test_a_substring_of_the_email_matches(self) -> None:
+        contact = Contact("John")
+        contact.set_email("john@example.com")
+
+        assert contact.matches("@example.com")
+
+    def test_a_substring_of_the_address_matches(self) -> None:
+        contact = Contact("John")
+        contact.set_address("Dluga 5, Gdansk")
+
+        assert contact.matches("gdansk")
+
+    def test_an_unset_field_does_not_match(self) -> None:
+        contact = Contact("John")
+
+        assert not contact.matches("@example.com")
+
+    def test_an_unrelated_query_does_not_match(self) -> None:
+        contact = Contact("John")
+
+        assert not contact.matches("Anna")
 
 
 class TestAddressBook:

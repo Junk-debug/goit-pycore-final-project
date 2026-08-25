@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 import typer
 from typer.core import TyperGroup
 
 from personal_assistant import cli
 from personal_assistant.commands import build_app
+from personal_assistant.commands import contacts as contacts_module
 from personal_assistant.models.address_book import AddressBook
 from personal_assistant.state import AppState
 
@@ -326,3 +329,138 @@ class TestEdit:
             run(command, state, "contact", "edit", "Nobody", "--email", "a@b.com") == 1
         )
         assert "No contact named 'Nobody'" in capsys.readouterr().out
+
+
+class TestList:
+    """`contact list` covers C2 (search) and C5 (birthday window)."""
+
+    # A fixed Tuesday, so a birthday falling on the following Saturday or
+    # Sunday reliably exercises the weekend shift regardless of when the
+    # suite actually runs.
+    TODAY = date(2026, 8, 25)
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self, monkeypatch) -> None:
+        class FixedToday(date):
+            @classmethod
+            def today(cls) -> date:  # type: ignore[override]
+                return TestList.TODAY
+
+        monkeypatch.setattr(contacts_module, "date", FixedToday)
+
+    def test_an_empty_book_says_so(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "list") == 0
+        assert "No contacts yet." in capsys.readouterr().out
+
+    def test_every_contact_is_listed_without_options(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "John")
+        run(command, state, "contact", "add", "Anna")
+        capsys.readouterr()
+
+        assert run(command, state, "contact", "list") == 0
+
+        printed = capsys.readouterr().out
+        assert "John" in printed
+        assert "Anna" in printed
+
+    def test_query_matches_any_field(self, command, state, capsys) -> None:
+        run(command, state, "contact", "add", "John", "--address", "Dluga 5, Gdansk")
+        run(command, state, "contact", "add", "Anna")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--query", "gdansk")
+
+        printed = capsys.readouterr().out
+        assert "John" in printed
+        assert "Anna" not in printed
+
+    def test_a_query_matching_nobody_is_distinct_from_an_empty_book(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "John")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--query", "nobody")
+
+        assert "No contacts match." in capsys.readouterr().out
+
+    def test_sort_by_name_is_alphabetical_and_case_insensitive(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "zoe")
+        run(command, state, "contact", "add", "Anna")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--sort", "name")
+
+        printed = capsys.readouterr().out
+        assert printed.index("Anna") < printed.index("zoe")
+
+    def test_sort_by_birthday_puts_the_soonest_first(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "Later", "--birthday", "01.09.1990")
+        run(command, state, "contact", "add", "Sooner", "--birthday", "27.08.1990")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--sort", "birthday")
+
+        printed = capsys.readouterr().out
+        assert printed.index("Sooner") < printed.index("Later")
+
+    def test_sort_by_birthday_puts_a_birthday_less_contact_last(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "Zoe")
+        run(command, state, "contact", "add", "Anna", "--birthday", "27.08.1990")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--sort", "birthday")
+
+        printed = capsys.readouterr().out
+        assert printed.index("Anna") < printed.index("Zoe")
+
+    def test_birthday_in_keeps_only_upcoming_birthdays(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "Soon", "--birthday", "27.08.1990")
+        run(command, state, "contact", "add", "Far", "--birthday", "01.01.1990")
+        run(command, state, "contact", "add", "NoBirthday")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--birthday-in", "7")
+
+        printed = capsys.readouterr().out
+        assert "Soon" in printed
+        assert "Far" not in printed
+        assert "NoBirthday" not in printed
+
+    def test_birthday_in_shows_the_greeting_date_shifted_off_a_weekend(
+        self, command, state, capsys
+    ) -> None:
+        # 30.08.1990 falls on a Sunday relative to TODAY (25.08.2026, a
+        # Tuesday); C5 requires the greeting to move to the Monday.
+        run(command, state, "contact", "add", "Anna", "--birthday", "30.08.1990")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list", "--birthday-in", "7")
+
+        printed = capsys.readouterr().out
+        assert "Greet on" in printed
+        assert "31.08.2026" in printed
+
+    def test_birthday_in_is_absent_from_the_table_without_the_option(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "John", "--birthday", "27.08.1990")
+        capsys.readouterr()
+
+        run(command, state, "contact", "list")
+
+        assert "Greet on" not in capsys.readouterr().out
+
+    def test_a_negative_window_is_rejected(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "list", "--birthday-in", "-1") == 1
+        assert "must not be negative" in capsys.readouterr().out

@@ -2,16 +2,27 @@
 
 from __future__ import annotations
 
+from datetime import date
+from enum import Enum
 from typing import Annotated
 
 import typer
+from rich.table import Table
 
 from personal_assistant import ui
 from personal_assistant.errors import NotFoundError, ValidationError
 from personal_assistant.models.address_book import AddressBook
+from personal_assistant.models.birthday import FORMAT as BIRTHDAY_FORMAT
 from personal_assistant.models.contact import Contact
 from personal_assistant.state import AppState
 from personal_assistant.values import commas
+
+
+class SortKey(str, Enum):
+    """The two ways `contact list` can order its results."""
+
+    name = "name"
+    birthday = "birthday"
 
 
 def register(app: typer.Typer) -> None:
@@ -72,6 +83,57 @@ def register(app: typer.Typer) -> None:
         """print one contact in full"""
         contact = required(ctx.obj, name)
         ui.render(ui.card(str(contact.name), _fields(contact)))
+
+    @contacts.command("list")
+    def list_contacts(
+        ctx: typer.Context,
+        query: Annotated[
+            str | None,
+            typer.Option(
+                metavar="<text>",
+                help="keep contacts whose name, phone, email or address "
+                "contains this text",
+            ),
+        ] = None,
+        birthday_in: Annotated[
+            int | None,
+            typer.Option(
+                "--birthday-in",
+                metavar="<days>",
+                help="keep contacts whose birthday falls within this many "
+                "days from today",
+            ),
+        ] = None,
+        sort: Annotated[SortKey | None, typer.Option(help="order the results")] = None,
+    ) -> None:
+        """list and filter contacts"""
+        if birthday_in is not None and birthday_in < 0:
+            raise ValidationError("--birthday-in must not be negative.")
+
+        book = ctx.obj.section(AddressBook)
+        today = date.today()
+        results = list(book.values())
+
+        if query is not None:
+            results = [contact for contact in results if contact.matches(query)]
+        if birthday_in is not None:
+            results = [
+                contact
+                for contact in results
+                if contact.birthday is not None
+                and _days_until(contact, today) <= birthday_in
+            ]
+
+        if sort is SortKey.name:
+            results.sort(key=lambda contact: str(contact.name).casefold())
+        elif sort is SortKey.birthday:
+            results.sort(key=lambda contact: _sort_key_birthday(contact, today))
+
+        if not results:
+            ui.render("No contacts yet." if not book else "No contacts match.")
+            return
+
+        ui.render(_table(results, today, show_greeting=birthday_in is not None))
 
     @contacts.command("delete")
     def delete_contact(
@@ -184,6 +246,51 @@ def _fields(contact: Contact) -> list[tuple[str, str | None]]:
         ("Address", str(contact.address) if contact.address else None),
         ("Birthday", str(contact.birthday) if contact.birthday else None),
     ]
+
+
+def _days_until(contact: Contact, today: date) -> int:
+    """Days from `today` until `contact`'s next birthday greeting.
+
+    Only meaningful once the caller has checked the contact has a birthday.
+    """
+    assert contact.birthday is not None
+    return (contact.birthday.next_greeting(today) - today).days
+
+
+def _sort_key_birthday(contact: Contact, today: date) -> date:
+    """A birthday-less contact sorts after every contact with one."""
+    if contact.birthday is None:
+        return date.max
+    return contact.birthday.next_greeting(today)
+
+
+def _table(contacts: list[Contact], today: date, *, show_greeting: bool) -> Table:
+    """Render contacts as rows, as shown by `list`.
+
+    `show_greeting` adds a column for the (possibly weekend-shifted) date
+    each birthday is next celebrated, since `--birthday-in` is what makes
+    that date relevant (C5).
+    """
+    columns = ["Name", "Phones", "Email", "Address", "Birthday"]
+    if show_greeting:
+        columns.append("Greet on")
+
+    rows: list[list[str]] = []
+    for contact in contacts:
+        row = [
+            str(contact.name),
+            ", ".join(str(phone) for phone in contact.phones) or "—",
+            str(contact.email) if contact.email else "—",
+            str(contact.address) if contact.address else "—",
+            str(contact.birthday) if contact.birthday else "—",
+        ]
+        if show_greeting:
+            birthday = contact.birthday
+            greeting = birthday.next_greeting(today) if birthday else None
+            row.append(greeting.strftime(BIRTHDAY_FORMAT) if greeting else "—")
+        rows.append(row)
+
+    return ui.table("Contacts", columns, rows)
 
 
 def required(state: AppState, name: str) -> Contact:
