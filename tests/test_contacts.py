@@ -112,3 +112,217 @@ def test_one_bad_number_among_several_is_reported(command, state, capsys) -> Non
         == 1
     )
     assert "oops" in capsys.readouterr().out
+
+
+class TestShow:
+    def test_every_field_is_printed(self, command, state, capsys) -> None:
+        run(
+            command,
+            state,
+            "contact",
+            "add",
+            "John",
+            "--phone",
+            "+48123456789",
+            "--email",
+            "john@example.com",
+            "--address",
+            "Dluga 5",
+            "--birthday",
+            "12.05.1998",
+        )
+        capsys.readouterr()
+
+        assert run(command, state, "contact", "show", "John") == 0
+
+        printed = capsys.readouterr().out
+        for expected in (
+            "John",
+            "+48123456789",
+            "john@example.com",
+            "Dluga 5",
+            "12.05.1998",
+        ):
+            assert expected in printed
+
+    def test_a_field_that_is_not_set_is_marked_as_empty(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "Zoe")
+        capsys.readouterr()
+
+        run(command, state, "contact", "show", "Zoe")
+
+        assert "—" in capsys.readouterr().out
+
+    def test_the_name_is_matched_whatever_the_case(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "show", "john") == 0
+
+    def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "show", "Nobody") == 1
+        assert "No contact named 'Nobody'" in capsys.readouterr().out
+
+
+class TestDelete:
+    def test_a_contact_is_removed_with_force(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "delete", "John", "--force") == 0
+        assert state.section(AddressBook).find("John") is None
+
+    def test_without_force_and_without_a_terminal_nothing_is_removed(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "John")
+        capsys.readouterr()
+
+        assert run(command, state, "contact", "delete", "John") == 0
+
+        assert state.section(AddressBook).find("John") is not None
+        assert "Cancelled" in capsys.readouterr().out
+
+    def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "delete", "Nobody", "--force") == 1
+        assert "No contact named 'Nobody'" in capsys.readouterr().out
+
+    def test_the_name_is_matched_whatever_the_case(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "delete", "john", "--force") == 0
+        assert state.section(AddressBook).find("John") is None
+
+
+class TestEdit:
+    def _add_john(self, command, state) -> None:
+        run(
+            command,
+            state,
+            "contact",
+            "add",
+            "John",
+            "--phone",
+            "+48123456789",
+            "--email",
+            "john@example.com",
+            "--address",
+            "Dluga 5",
+            "--birthday",
+            "12.05.1998",
+        )
+
+    def test_a_single_field_is_replaced(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(command, state, "contact", "edit", "John", "--email", "new@example.com")
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert str(contact.email) == "new@example.com"
+
+    def test_an_empty_value_clears_an_optional_field(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(command, state, "contact", "edit", "John", "--address", "")
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert contact.address is None
+
+    def test_a_phone_is_added(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(command, state, "contact", "edit", "John", "--add-phone", "+48999888777")
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert [str(p) for p in contact.phones] == ["+48123456789", "+48999888777"]
+
+    def test_several_phones_are_added_at_once(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(
+            command,
+            state,
+            "contact",
+            "edit",
+            "John",
+            "--add-phone",
+            "+48999888777,+48111222333",
+        )
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert len(contact.phones) == 3
+
+    def test_replacing_a_phone_is_one_atomic_edit(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(
+            command,
+            state,
+            "contact",
+            "edit",
+            "John",
+            "--remove-phone",
+            "+48123456789",
+            "--add-phone",
+            "+48111222333",
+        )
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert [str(p) for p in contact.phones] == ["+48111222333"]
+
+    def test_removing_a_number_the_contact_does_not_have_is_reported(
+        self, command, state, capsys
+    ) -> None:
+        self._add_john(command, state)
+        capsys.readouterr()
+
+        failed = run(
+            command, state, "contact", "edit", "John", "--remove-phone", "+48000000000"
+        )
+
+        assert failed == 1
+        assert "has no number" in capsys.readouterr().out
+
+    def test_the_contact_is_renamed(self, command, state) -> None:
+        self._add_john(command, state)
+
+        run(command, state, "contact", "edit", "John", "--name", "John Doe")
+
+        book = state.section(AddressBook)
+        assert book.find("John") is None
+        assert book.find("John Doe") is not None
+
+    def test_renaming_onto_an_existing_name_is_refused(
+        self, command, state, capsys
+    ) -> None:
+        self._add_john(command, state)
+        run(command, state, "contact", "add", "Anna")
+        capsys.readouterr()
+
+        failed = run(command, state, "contact", "edit", "John", "--name", "Anna")
+
+        assert failed == 1
+        assert "already exists" in capsys.readouterr().out
+        assert state.section(AddressBook).find("John") is not None
+
+    def test_an_invalid_new_value_is_reported_without_changing_anything(
+        self, command, state
+    ) -> None:
+        self._add_john(command, state)
+
+        assert run(command, state, "contact", "edit", "John", "--email", "oops") == 1
+
+        contact = state.section(AddressBook).find("John")
+        assert contact is not None
+        assert str(contact.email) == "john@example.com"
+
+    def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
+        assert (
+            run(command, state, "contact", "edit", "Nobody", "--email", "a@b.com") == 1
+        )
+        assert "No contact named 'Nobody'" in capsys.readouterr().out

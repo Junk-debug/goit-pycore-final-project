@@ -55,6 +55,9 @@ action does not require.
 | `help` | List the available commands |
 | `help <command>...` | Explain one command, for example `help contact add` |
 | `contact add <name> [options]` | Create a contact |
+| `contact show <name>` | Print one contact with all of its fields |
+| `contact edit <name> [options]` | Change fields of an existing contact |
+| `contact delete <name>` | Remove a contact |
 | `exit` | Leave the interactive session. Aliases: `quit`, `close` |
 | `web` | Start the web interface (not implemented yet) |
 
@@ -89,6 +92,53 @@ $ assistant contact add John --phone 123
 | Email | `name@domain.tld` |
 | Address | Non-empty, at most 128 characters |
 | Birthday | `DD.MM.YYYY`, a real date, not in the future, 1900 or later |
+
+### `contact show`
+
+```
+contact show <name>
+```
+
+Prints one contact as a card, marking a field that is not set with a dash. The
+name is matched without regard to case. `contact add` and `contact edit` print
+the same card after they run, so the result of a change is always visible.
+
+```bash
+assistant contact show John
+```
+
+### `contact edit`
+
+```
+contact edit <name> [--name <new>] [--email <email>] [--address <address>]
+                    [--birthday <DD.MM.YYYY>] [--add-phone <phone>[,<phone>]]
+                    [--remove-phone <phone>[,<phone>]]
+```
+
+Only the fields you pass are touched. An empty value clears an optional field;
+`--add-phone` and `--remove-phone` may be combined in one call to replace a
+number atomically. At least one option is required — running `edit` with
+nothing to change is reported rather than silently doing nothing.
+
+```bash
+assistant contact edit John --email new@example.com
+assistant contact edit John --address ""
+assistant contact edit John --remove-phone +48123456789 --add-phone +48111222333
+assistant contact edit John --name "John Doe"
+```
+
+### `contact delete`
+
+```
+contact delete <name> [--force]
+```
+
+Asks for confirmation unless `--force` is given, or the input is not a
+terminal — a piped or scripted run never deletes anything by default.
+
+```bash
+assistant contact delete John --force
+```
 
 ## Where the data is kept
 

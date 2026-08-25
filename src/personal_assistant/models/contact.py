@@ -34,14 +34,35 @@ class Contact:
         self.phones.append(phone)
         return phone
 
-    def set_email(self, raw: str) -> None:
-        self.email = Email(raw)
+    def find_phone(self, raw: str) -> Phone | None:
+        """Return the stored number equal to `raw`, whatever its spelling."""
+        wanted = Phone(raw)
+        for phone in self.phones:
+            if phone == wanted:
+                return phone
+        return None
 
-    def set_address(self, raw: str) -> None:
-        self.address = Address(raw)
+    def remove_phone(self, raw: str) -> None:
+        """Remove a number, reporting one the contact does not hold."""
+        phone = self.find_phone(raw)
+        if phone is None:
+            raise ValidationError(f"{self.name} has no number {raw}.")
+        self.phones.remove(phone)
 
-    def set_birthday(self, raw: str) -> None:
-        self.birthday = Birthday(raw)
+    def rename(self, raw: str) -> None:
+        self.name = Name(raw)
+
+    def set_email(self, raw: str | None) -> None:
+        """Set the email, or clear it when given nothing."""
+        self.email = Email(raw) if raw else None
+
+    def set_address(self, raw: str | None) -> None:
+        """Set the address, or clear it when given nothing."""
+        self.address = Address(raw) if raw else None
+
+    def set_birthday(self, raw: str | None) -> None:
+        """Set the birthday, or clear it when given nothing."""
+        self.birthday = Birthday(raw) if raw else None
 
     def __str__(self) -> str:
         parts = [f"{self.name}"]

@@ -1,46 +1,38 @@
 """Presentation layer.
 
-Every handler returns data and never prints. This module is the only place
-that writes to the terminal, which keeps the domain free of formatting and
-lets the planned web interface reuse the same handlers (D8).
+The only module that writes to the terminal. Commands decide what to say, this
+module decides how it looks, which keeps formatting out of the domain and out
+of the command bodies.
 
-`rich` is optional by D21: when it is unavailable the same calls fall back to
-plain printing, so a missing package costs appearance, never function.
+Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 """
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 from personal_assistant.types import Renderable
 
-if TYPE_CHECKING:
-    from rich.table import Table
-
-try:
-    from rich.console import Console
-    from rich.table import Table
-    from rich.text import Text
-
-    _console: Console | None = Console()
-except ImportError:  # pragma: no cover - exercised only without rich
-    _console = None
+_console = Console()
 
 
 def render(result: Renderable) -> None:
-    """Print whatever a handler returned.
+    """Print a line of text or a table.
 
-    Plain strings are printed verbatim: `rich` would otherwise read square
-    brackets as its own markup and colour arbitrary tokens on its own, which
-    mangles pre-formatted text such as the output of `--help`. Objects built
-    by this module, tables among them, are rendered normally.
+    A plain string is printed verbatim, because `rich` would otherwise read
+    square brackets as its own markup and colour arbitrary words on its own,
+    which mangles pre-formatted text such as the output of `--help`.
     """
     if result is None:
         return
-    if _console is None:
-        print(result)
-    elif isinstance(result, str):
+    if isinstance(result, str):
         _console.print(result, markup=False, highlight=False)
     else:
         _console.print(result)
@@ -48,34 +40,69 @@ def render(result: Renderable) -> None:
 
 def success(message: str) -> None:
     """Report a completed action."""
-    _styled(message, "green")
+    _console.print(Text(message, style="green"))
 
 
 def failure(message: str) -> None:
     """Report an expected error, such as invalid input."""
-    _styled(message, "red")
-
-
-def _styled(message: str, colour: str) -> None:
-    """Print a whole message in one colour, never parsing its content."""
-    if _console is None:
-        print(message)
-        return
-    _console.print(Text(message, style=colour))
+    _console.print(Text(message, style="red"))
 
 
 def table(
     title: str, columns: Sequence[str], rows: Sequence[Sequence[object]]
-) -> Renderable:
-    """Build a table for a handler to return, or plain text without rich."""
-    if _console is not None:
-        built = Table(title=title)
-        for column in columns:
-            built.add_column(column)
-        for row in rows:
-            built.add_row(*[str(cell) for cell in row])
-        return built
+) -> Table:
+    """Build a table for a command to hand to `render`."""
+    built = Table(
+        title=title, box=box.ROUNDED, header_style="bold cyan", title_style="bold"
+    )
+    for index, column in enumerate(columns):
+        # The first column holds the label of each row (a field name, a
+        # contact's name); bolding it reads as a key, not as emphasis on some
+        # rows over others the way alternating row colours would.
+        built.add_column(column, style="bold" if index == 0 else None)
+    for row in rows:
+        built.add_row(*[str(cell) for cell in row])
+    return built
 
-    header = " | ".join(columns)
-    body = "\n".join(" | ".join(str(cell) for cell in row) for row in rows)
-    return f"{title}\n{header}\n{body}" if rows else f"{title}\n{header}"
+
+def confirm(question: str) -> bool:
+    """Ask the user to confirm a destructive action.
+
+    Answers no whenever an answer cannot be read: input that is not a terminal
+    (a piped or scripted run has nobody to say yes), and Ctrl-D or Ctrl-C at the
+    prompt itself. A destructive action must never go ahead by default; `--force`
+    is the way to mean it.
+    """
+    if not sys.stdin.isatty():
+        return False
+
+    prompt = Text(question)
+    prompt.append(" [y/N] ", style="bold yellow")
+    try:
+        # A Text object, not an f-string: `question` may hold arbitrary data,
+        # such as a contact name, and Console.input parses markup in a plain
+        # string by default — the same trap render() guards against.
+        answer = _console.input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer.strip().lower() in {"y", "yes"}
+
+
+def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
+    """Build a labelled panel for a single record, such as one contact.
+
+    A record is a handful of "label: value" pairs, not a set of rows to
+    compare against each other, so it is framed once with its own name in the
+    border rather than drawn as a table with a repeated title and column
+    headers. A field that is not set is shown as a dash.
+
+    Built on a borderless `Table.grid` rather than plain lines of text: a long
+    value that wraps then continues under the value column instead of running
+    back under the label, which a hand-built line of text cannot do on its own.
+    """
+    grid = Table.grid(padding=(0, 2, 0, 0))
+    grid.add_column(style="bold cyan", no_wrap=True)
+    grid.add_column()
+    for label, value in fields:
+        grid.add_row(label, value if value else "—")
+    return Panel(grid, title=title, title_align="left", expand=False)
