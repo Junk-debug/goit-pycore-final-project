@@ -19,7 +19,6 @@ from personal_assistant.state import AppState
 from personal_assistant.values import commas
 
 TITLE = "Notes"
-NO_TAGS = "-"
 COLUMNS = (
     ui.Column("Id", style="cyan", wrap=False),
     ui.Column("Note"),
@@ -63,17 +62,7 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """print one note in full"""
         note = _notes(ctx)[note_id]
-        ui.render(
-            ui.details(
-                f"Note {note.id}",
-                [
-                    ("Text", note.text),
-                    ("Tags", _listed(note) or NO_TAGS),
-                    ("Created", note.stamp(note.created)),
-                    ("Updated", note.stamp(note.updated)),
-                ],
-            )
-        )
+        ui.render(ui.card(f"Note {note.id}", _fields(note)))
 
     @notes.command("list")
     def list_notes(
@@ -139,6 +128,7 @@ def register(app: typer.Typer) -> None:
         note = _notes(ctx)[note_id]
         note.edit(text=text, add=added, remove=removed)
         ui.success(f"Note {note.id} updated.")
+        ui.render(ui.card(f"Note {note.id}", _fields(note)))
 
     @notes.command("delete")
     def delete_note(
@@ -186,3 +176,13 @@ def _tags(given: list[str] | None) -> tuple[str, ...]:
 def _listed(note: Note) -> str:
     """The tags of a note on one line, in the order they are shown."""
     return ", ".join(note.tag_names())
+
+
+def _fields(note: Note) -> list[tuple[str, str | None]]:
+    """The fields of a note, as shown by `show` and `edit` alike."""
+    return [
+        ("Text", str(note.text)),
+        ("Tags", _listed(note) or None),
+        ("Created", note.stamp(note.created)),
+        ("Updated", note.stamp(note.updated)),
+    ]
