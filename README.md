@@ -55,6 +55,11 @@ action does not require.
 | `help` | List the available commands |
 | `help <command>...` | Explain one command, for example `help contact add` |
 | `contact add <name> [options]` | Create a contact |
+| `note add <text> [options]` | Write a note |
+| `note show <id>` | Print one note in full |
+| `note list [options]` | List notes, narrowed by the options |
+| `note edit <id> [options]` | Change the text or the tags of a note |
+| `note delete <id> [--force]` | Remove a note |
 | `exit` | Leave the interactive session. Aliases: `quit`, `close` |
 | `web` | Start the web interface (not implemented yet) |
 
@@ -89,6 +94,63 @@ $ assistant contact add John --phone 123
 | Email | `name@domain.tld` |
 | Address | Non-empty, at most 128 characters |
 | Birthday | `DD.MM.YYYY`, a real date, not in the future, 1900 or later |
+
+### `note add`
+
+```
+note add <text> [--tag <tag>...]
+```
+
+Writes a note and reports the id the other commands address it by. Tags are
+optional; repeat the option or separate the keywords with commas.
+
+```bash
+assistant note add "Buy milk and bread"
+assistant note add "Read the pickle docs" --tag study --tag python
+assistant note add "Read the pickle docs" --tag "study,python"
+```
+
+### `note list`
+
+```
+note list [--query <text>] [--tag <tag>] [--sort tag|created|updated]
+```
+
+Lists the notes as a table, showing the first 60 characters of each. Without
+options it lists all of them; the options narrow the result and combine.
+`--query` matches a part of the text, `--tag` keeps the notes carrying that
+tag, and `--sort` orders them by their first tag or by time.
+
+```bash
+assistant note list
+assistant note list --query pickle
+assistant note list --tag python --sort updated
+```
+
+### `note show`, `note edit` and `note delete`
+
+```
+note show <id>
+note edit <id> [--text <text>] [--add-tag <tag>...] [--remove-tag <tag>...]
+note delete <id> [--force]
+```
+
+`note show` prints one note with its tags and timestamps. `note edit` changes
+what the options name and nothing else, so adding and removing a tag in one
+call replaces it. `note delete` asks before removing a note unless `--force`
+is given.
+
+```bash
+assistant note show 3
+assistant note edit 3 --text "Read the pickle and shelve docs"
+assistant note edit 3 --add-tag urgent --remove-tag draft
+assistant note delete 3 --force
+```
+
+| Field | Accepted |
+|-------|----------|
+| Text | Non-empty, at most 4096 characters |
+| Tag | One keyword without spaces, at most 32 characters, stored in lower case |
 
 ## Where the data is kept
 
