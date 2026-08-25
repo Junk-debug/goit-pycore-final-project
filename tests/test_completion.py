@@ -11,10 +11,12 @@ import pytest
 
 pytest.importorskip("prompt_toolkit")
 
+import typer  # noqa: E402
 from prompt_toolkit.completion import CompleteEvent  # noqa: E402
 from prompt_toolkit.document import Document  # noqa: E402
+from typer.core import TyperGroup  # noqa: E402
 
-from personal_assistant.commands import build_parser  # noqa: E402
+from personal_assistant.commands import build_app  # noqa: E402
 from personal_assistant.completion import build_completer  # noqa: E402
 from personal_assistant.models.note_book import NoteBook  # noqa: E402
 from personal_assistant.state import AppState  # noqa: E402
@@ -23,12 +25,13 @@ from personal_assistant.state import AppState  # noqa: E402
 @pytest.fixture
 def completer():
     """A completer over the real command tree and two tagged notes."""
-    build_parser()
+    command = typer.main.get_command(build_app())
+    assert isinstance(command, TyperGroup)
     state = AppState.empty()
     book = state.section(NoteBook)
     book.add("Read the pickle docs", ["study", "python"])
     book.add("Ship the release", ["work"])
-    return build_completer(state)
+    return build_completer(command, state)
 
 
 def offered(completer, line) -> list[str]:

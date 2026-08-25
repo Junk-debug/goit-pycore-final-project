@@ -1,7 +1,7 @@
 """Exceptions the assistant reports to the user.
 
 Everything raised from this module is expected: it describes invalid input or
-a missing record. Such an error is turned into a message and never terminates
+a missing contact. Such an error is turned into a message and never terminates
 the program, as required by acceptance criterion 11.
 """
 
@@ -15,7 +15,7 @@ class ValidationError(AssistantError):
 
 
 class NotFoundError(AssistantError):
-    """The requested record does not exist."""
+    """The requested contact does not exist."""
 
 
 class CommandError(AssistantError):

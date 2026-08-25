@@ -1,6 +1,6 @@
 """Tab completion for the interactive session.
 
-The candidates are read from the parser that the commands were registered in,
+The candidates are read from the command tree the assistant was built from,
 never from a list kept beside it. A group that adds a command therefore gets
 completion for it for free, and the proposals cannot drift away from what the
 assistant actually accepts, which is what makes them worth offering at all
@@ -12,16 +12,19 @@ missing, and the interactive session then reads plain lines instead.
 
 from __future__ import annotations
 
-import argparse
 from collections.abc import Callable, Iterator, Sequence
+from typing import TypeAlias
 
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
+from typer.core import TyperCommand, TyperGroup, TyperOption
 
-from personal_assistant import commands
 from personal_assistant.models.note_book import NoteBook
-from personal_assistant.parser import ReplArgumentParser
 from personal_assistant.state import AppState
+
+# Every command in the tree is one of these two: typer builds a group for
+# each `add_typer` and a command for each function below it.
+AnyCommand: TypeAlias = "TyperCommand | TyperGroup"
 
 LONG_OPTION = "--"
 
@@ -52,7 +55,7 @@ class CommandCompleter(Completer):
     made of options, and the word after an option is its value.
     """
 
-    def __init__(self, root: ReplArgumentParser, state: AppState) -> None:
+    def __init__(self, root: TyperGroup, state: AppState) -> None:
         self.root = root
         self.state = state
 
@@ -77,66 +80,68 @@ class CommandCompleter(Completer):
         if given and given[0] == HELP:
             return self.candidates(given[1:])
 
-        parser, rest = self._walk(given)
+        command, rest = self._walk(given)
         if not rest:
-            below = _commands_below(parser)
+            below = _commands_below(command)
             if below:
                 return below
         elif rest[-1] in VALUE_SOURCES:
             return [(value, "") for value in VALUE_SOURCES[rest[-1]](self.state)]
-        return _options_of(parser, rest)
+        return _options_of(command, rest)
 
-    def _walk(
-        self, given: Sequence[str]
-    ) -> tuple[argparse.ArgumentParser, Sequence[str]]:
+    def _walk(self, given: Sequence[str]) -> tuple[AnyCommand, Sequence[str]]:
         """Descend the command tree as far as the entered words reach."""
-        parser: argparse.ArgumentParser = self.root
+        command: AnyCommand = self.root
         rest = list(given)
         while rest:
-            below = (
-                parser.child(rest[0])
-                if isinstance(parser, ReplArgumentParser)
-                else None
-            )
+            below = _named(command, rest[0])
             if below is None:
                 break
-            parser, rest = below, rest[1:]
-        return parser, rest
+            command, rest = below, rest[1:]
+        return command, rest
 
 
-def build_completer(state: AppState) -> Completer:
+def build_completer(root: TyperGroup, state: AppState) -> Completer:
     """The completer the interactive session installs (D21)."""
-    return CommandCompleter(commands.root_parser(), state)
+    return CommandCompleter(root, state)
 
 
-def _commands_below(parser: argparse.ArgumentParser) -> list[tuple[str, str]]:
+def _named(command: AnyCommand, name: str) -> AnyCommand | None:
+    """The command registered under that name, when one command holds others."""
+    if not isinstance(command, TyperGroup):
+        return None
+    below = command.commands.get(name)
+    return below if isinstance(below, TyperCommand | TyperGroup) else None
+
+
+def _commands_below(command: AnyCommand) -> list[tuple[str, str]]:
     """The commands directly below this one, with their descriptions.
 
-    An alias shares the parser of the command it stands for, so keeping one
-    name per parser leaves `quit` and `close` out of the proposals without
-    this file having to know that they exist.
+    A hidden command is left out, which is how the `quit` and `close` aliases
+    stay out of the proposals without this file having to know they exist.
     """
-    found: dict[int, tuple[str, str]] = {}
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            for name, below in action.choices.items():
-                found.setdefault(id(below), (name, below.description or ""))
-    return list(found.values())
+    if not isinstance(command, TyperGroup):
+        return []
+    return [
+        (name, below.get_short_help_str())
+        for name, below in command.commands.items()
+        if not below.hidden
+    ]
 
 
-def _options_of(
-    parser: argparse.ArgumentParser, given: Sequence[str]
-) -> list[tuple[str, str]]:
+def _options_of(command: AnyCommand, given: Sequence[str]) -> list[tuple[str, str]]:
     """The options this command still accepts, with their help text."""
     offered: list[tuple[str, str]] = []
-    for action in parser._actions:
-        names = [name for name in action.option_strings if name.startswith(LONG_OPTION)]
-        if not names or (_once_only(action) and any(name in given for name in names)):
+    for parameter in command.params:
+        if not isinstance(parameter, TyperOption) or parameter.hidden:
             continue
-        offered.extend((name, action.help or "") for name in names)
+        names = [name for name in parameter.opts if name.startswith(LONG_OPTION)]
+        if not names or (not parameter.multiple and _already_given(names, given)):
+            continue
+        offered.extend((name, parameter.help or "") for name in names)
     return offered
 
 
-def _once_only(action: argparse.Action) -> bool:
-    """Whether the option is spent once given, and not worth proposing again."""
-    return not isinstance(action, argparse._AppendAction)
+def _already_given(names: Sequence[str], given: Sequence[str]) -> bool:
+    """Whether an option is spent, and so not worth proposing again."""
+    return any(name in given for name in names)

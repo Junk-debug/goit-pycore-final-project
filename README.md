@@ -2,7 +2,8 @@
 
 A personal assistant with a command-line interface: an address book and notes.
 
-Final team project of the Python Programming: Foundations and Best Practices course.
+Final team project of the Python Programming: Foundations and Best Practices
+course.
 
 ## Requirements
 
@@ -11,7 +12,7 @@ Final team project of the Python Programming: Foundations and Best Practices cou
 ## Installation
 
 ```bash
-git clone <URL of this repository>
+git clone https://github.com/Junk-debug/goit-pycore-final-project.git
 cd goit-pycore-final-project
 
 python3 -m venv .venv
@@ -20,29 +21,81 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-Once installed, the `assistant` command is available from any directory:
+Once installed, the `assistant` command is available from any directory.
 
-```bash
-assistant
+## Two ways to run it
+
+Started without arguments, the assistant reads commands until you leave:
+
+```
+$ assistant
+Personal assistant. Type 'help' to see the commands, 'exit' to leave.
+assistant> contact add John --phone +48123456789
+Added John; phones: +48123456789.
+assistant> exit
+Good bye!
 ```
 
-Alternative way to run it, useful when the command is not on your `PATH`:
+Given arguments, it runs one command and exits, which is convenient in scripts:
 
 ```bash
-python -m personal_assistant
+assistant contact add John --phone +48123456789
 ```
 
-## Usage
+Both forms accept exactly the same commands. If the `assistant` command is not
+on your `PATH`, `python -m personal_assistant` does the same thing.
 
-The assistant runs in a loop: type a command, read the result, type `exit` to quit.
-The `help` command prints the full list of available commands.
+## Commands
 
-<!-- TODO: command reference table -->
+Every command is written as `<entity> <action>`, with options for anything the
+action does not require.
 
-## Data storage
+| Command | What it does |
+|---------|--------------|
+| `help` | List the available commands |
+| `help <command>...` | Explain one command, for example `help contact add` |
+| `contact add <name> [options]` | Create a contact |
+| `exit` | Leave the interactive session. Aliases: `quit`, `close` |
+| `web` | Start the web interface (not implemented yet) |
 
-Contacts and notes are stored in the user's home directory, under
-`~/.personal_assistant/`. Data is preserved between runs.
+### `contact add`
+
+```
+contact add <name> [--phone <phone>[,<phone>]] [--email <email>]
+                   [--address <address>] [--birthday <DD.MM.YYYY>]
+```
+
+Only the name is required. Several phone numbers are separated by commas, and
+spaces around the commas are ignored.
+
+```bash
+assistant contact add John
+assistant contact add John --phone "+48123456789,+48999888777"
+assistant contact add "Anna Kowalska" --birthday 12.05.1998 --address "Dluga 5, Gdansk"
+```
+
+Every value is checked as it is entered, and an invalid one is reported without
+storing anything:
+
+```
+$ assistant contact add John --phone 123
+'123' is not a valid phone number. Expected 9 to 15 digits, optionally starting with '+'.
+```
+
+| Field | Accepted |
+|-------|----------|
+| Name | Non-empty, at most 64 characters, unique in the book |
+| Phone | An optional `+` followed by 9 to 15 digits; spaces, dashes, dots and brackets are ignored |
+| Email | `name@domain.tld` |
+| Address | Non-empty, at most 128 characters |
+| Birthday | `DD.MM.YYYY`, a real date, not in the future, 1900 or later |
+
+## Where the data is kept
+
+Contacts and notes are stored in your home directory, in
+`~/.personal_assistant/data.pkl`. The file is written when the assistant exits
+and read when it starts, so nothing is lost between runs. A file that cannot be
+read is moved aside rather than deleted, and the assistant starts empty.
 
 ## Development
 
@@ -52,7 +105,7 @@ Install the project together with the developer tools:
 pip install -e ".[dev]"
 ```
 
-Run the tests and the style checks:
+Run the checks:
 
 ```bash
 pytest
@@ -61,28 +114,15 @@ ruff format .
 mypy
 ```
 
-### Running during development
-
 The editable install means the `assistant` command already runs the sources in
-this directory: edit a file and the next run picks it up, with no reinstall.
-Reinstall only after changing `pyproject.toml`.
+this directory: edit a file and the next run picks it up. Reinstall only after
+changing `pyproject.toml`.
 
-```bash
-source .venv/bin/activate
-
-assistant                                  # interactive session
-assistant contact list                     # a single command
-python -m personal_assistant               # same, without the console script
-printf 'help\nexit\n' | assistant         # scripted, useful for a quick check
-```
-
-By default the assistant reads and writes `~/.personal_assistant/data.pkl`.
 Point `PERSONAL_ASSISTANT_DATA` somewhere else to keep a development session
 away from real data:
 
 ```bash
 export PERSONAL_ASSISTANT_DATA=/tmp/assistant-dev.pkl
-assistant
 ```
 
 Delete that file to start from an empty state.

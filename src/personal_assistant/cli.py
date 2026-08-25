@@ -1,6 +1,6 @@
 """Entry point of the command-line interface.
 
-Two modes share one parser and one set of handlers, as decided in D5:
+Two modes share one application and one set of commands, as decided in D5:
 
     assistant                       the interactive loop, the default
     assistant contact add John      a single command, then exit
@@ -15,49 +15,51 @@ import shlex
 import sys
 from collections.abc import Callable
 
+import typer
+from typer.core import TyperGroup
+
 from personal_assistant import ui
-from personal_assistant.commands import build_parser
-from personal_assistant.errors import AssistantError, CommandError, ExitLoop
-from personal_assistant.parser import ReplArgumentParser
+from personal_assistant.commands import build_app
+from personal_assistant.commands.common import ShowHelp
+from personal_assistant.errors import AssistantError, ExitLoop
 from personal_assistant.state import AppState
 from personal_assistant.storage import Storage
-from personal_assistant.types import Handler
 
 PROMPT = "assistant> "
 WELCOME = "Personal assistant. Type 'help' to see the commands, 'exit' to leave."
 FAREWELL = "Good bye!"
+PROGRAM = "assistant"
 
 
-def dispatch(parser: ReplArgumentParser, argv: list[str], state: AppState) -> int:
+def dispatch(command: TyperGroup, argv: list[str], state: AppState) -> int:
     """Run one command and show its result. Returns a process exit code.
 
-    Every expected failure is reported as a message, so neither an invalid
+    Every expected failure is reported as a message, so neither an unknown
     command nor invalid data ends the program (criterion 11).
     """
     try:
-        args = parser.parse_args(argv)
-    except CommandError as error:
-        message = str(error)
-        if not message:
-            # `--help` has already printed its output and asked to exit.
-            return 0
-        ui.failure(message)
-        return 2
-
-    handler: Handler | None = getattr(args, "handler", None)
-    if handler is None:
-        ui.failure(parser.format_usage().strip())
-        return 2
-
-    try:
-        ui.render(handler(args, state))
+        command.main(args=argv, standalone_mode=False, prog_name=PROGRAM, obj=state)
+    except ExitLoop:
+        raise
+    except ShowHelp as asked:
+        return dispatch(command, [*asked.topic, "--help"], state)
     except AssistantError as error:
         ui.failure(str(error))
         return 1
+    except typer.Exit as leaving:
+        return int(leaving.exit_code)
+    except Exception as error:
+        # Typer reports a parse error this way; anything else is a real defect
+        # and must not be swallowed.
+        reported = getattr(error, "format_message", None)
+        if reported is None:
+            raise
+        ui.failure(reported())
+        return 2
     return 0
 
 
-def _make_reader(state: AppState) -> Callable[[], str]:
+def _make_reader(command: TyperGroup, state: AppState) -> Callable[[], str]:
     """Return a function that reads one line from the user.
 
     Uses `prompt_toolkit` for completion and history when it is installed and
@@ -66,7 +68,7 @@ def _make_reader(state: AppState) -> Callable[[], str]:
     in, which is how the tests and any scripted demo drive the assistant.
     """
     if not sys.stdin.isatty():
-        return lambda: input()
+        return input
 
     try:
         from prompt_toolkit import PromptSession
@@ -78,7 +80,7 @@ def _make_reader(state: AppState) -> Callable[[], str]:
     try:
         from personal_assistant.completion import build_completer
 
-        completer = build_completer(state)
+        completer = build_completer(command, state)
     except ImportError:
         pass
 
@@ -88,9 +90,9 @@ def _make_reader(state: AppState) -> Callable[[], str]:
     return lambda: session.prompt(PROMPT)
 
 
-def run_loop(parser: ReplArgumentParser, state: AppState) -> int:
+def run_loop(command: TyperGroup, state: AppState) -> int:
     """Read commands until the user leaves (criterion 8)."""
-    read = _make_reader(state)
+    read = _make_reader(command, state)
     ui.render(WELCOME)
 
     while True:
@@ -109,7 +111,7 @@ def run_loop(parser: ReplArgumentParser, state: AppState) -> int:
             continue
 
         try:
-            dispatch(parser, argv, state)
+            dispatch(command, argv, state)
         except ExitLoop:
             break
 
@@ -119,7 +121,9 @@ def run_loop(parser: ReplArgumentParser, state: AppState) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     """Run the assistant and return a process exit code."""
-    parser = build_parser()
+    command = typer.main.get_command(build_app())
+    # The app is always a tree of groups, never a single bare command.
+    assert isinstance(command, TyperGroup)
     words = list(sys.argv[1:] if argv is None else argv)
 
     storage = Storage()
@@ -127,10 +131,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if words:
             try:
-                return dispatch(parser, words, state)
+                return dispatch(command, words, state)
             except ExitLoop:
                 return 0
-        return run_loop(parser, state)
+        return run_loop(command, state)
     finally:
         storage.save(state)
 

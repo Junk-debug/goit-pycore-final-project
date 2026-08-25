@@ -11,12 +11,27 @@ from __future__ import annotations
 
 from collections import UserDict
 from collections.abc import Iterable
+from enum import Enum
 
 from personal_assistant.errors import NotFoundError, ValidationError
 from personal_assistant.models.note import Note
 from personal_assistant.models.tag import Tag
 
-SORT_KEYS = ("tag", "created", "updated")
+
+class SortKey(str, Enum):
+    """The orders `note list --sort` accepts (T3).
+
+    Spelled as a string enumeration so that the command line validates the
+    value before it reaches the notebook, while the notebook keeps taking a
+    plain string and stays free of the interface layer.
+    """
+
+    TAG = "tag"
+    CREATED = "created"
+    UPDATED = "updated"
+
+
+SORT_KEYS = tuple(key.value for key in SortKey)
 
 
 class NoteBook(UserDict[int, Note]):
