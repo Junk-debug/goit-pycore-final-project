@@ -130,9 +130,15 @@ def _commands_below(command: AnyCommand) -> list[tuple[str, str]]:
 
 
 def _options_of(command: AnyCommand, given: Sequence[str]) -> list[tuple[str, str]]:
-    """The options this command still accepts, with their help text."""
+    """The options this command still accepts, with their help text.
+
+    `--help` is not in `command.params`: click attaches it lazily through
+    `get_params`, on a context, rather than declaring it as a regular option.
+    Building that context is how the same completions include it too.
+    """
     offered: list[tuple[str, str]] = []
-    for parameter in command.params:
+    context = command.make_context(command.name or "", [], resilient_parsing=True)
+    for parameter in command.get_params(context):
         if not isinstance(parameter, TyperOption) or parameter.hidden:
             continue
         names = [name for name in parameter.opts if name.startswith(LONG_OPTION)]

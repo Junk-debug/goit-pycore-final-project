@@ -68,6 +68,11 @@ def test_an_action_proposes_its_options(completer) -> None:
     assert "--query" in proposed and "--sort" in proposed
 
 
+def test_help_is_proposed_even_though_click_adds_it_lazily(completer) -> None:
+    """`--help` is not in `command.params`; it must still be a candidate."""
+    assert "--help" in offered(completer, "note list ")
+
+
 def test_an_option_already_given_is_not_proposed_again(completer) -> None:
     assert "--query" not in offered(completer, "note list --query pickle ")
 
