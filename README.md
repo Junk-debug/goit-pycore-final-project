@@ -58,6 +58,7 @@ Run the tests and the style checks:
 pytest
 ruff check .
 ruff format .
+mypy
 ```
 
 ### Running during development

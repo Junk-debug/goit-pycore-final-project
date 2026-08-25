@@ -16,6 +16,7 @@ assistant = "personal_assistant.cli:main"
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "mypy>=1.11",
 ]
 
 [build-system]
@@ -24,6 +25,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+personal_assistant = ["py.typed"]
 
 [tool.ruff]
 line-length = 88
@@ -34,3 +38,20 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src", "tests"]
+strict = true
+
+[[tool.mypy.overrides]]
+# Tests are checked, but their pytest fixtures are not worth annotating:
+# the value of strict typing is in the code that ships.
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+# The notes module does not exist yet; the contact group arrived first.
+module = ["personal_assistant.models.note_book", "personal_assistant.completion"]
+ignore_missing_imports = true
