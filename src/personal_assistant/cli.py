@@ -63,7 +63,7 @@ def dispatch(command: TyperGroup, argv: list[str], state: AppState) -> int:
     return 0
 
 
-def _make_reader() -> Callable[[], str]:
+def _make_reader(command: TyperGroup, state: AppState) -> Callable[[], str]:
     """Return a function that reads one line from the user.
 
     Uses `prompt_toolkit` for completion and history when it is installed and
@@ -82,13 +82,23 @@ def _make_reader() -> Callable[[], str]:
 
     from prompt_toolkit.formatted_text import ANSI
 
-    session: PromptSession[str] = PromptSession(history=InMemoryHistory())
+    completer = None
+    try:
+        from personal_assistant.completion import build_completer
+
+        completer = build_completer(command, state)
+    except ImportError:
+        pass
+
+    session: PromptSession[str] = PromptSession(
+        history=InMemoryHistory(), completer=completer
+    )
     return lambda: session.prompt(ANSI(PROMPT_DISPLAY))
 
 
 def run_loop(command: TyperGroup, state: AppState) -> int:
     """Read commands until the user leaves (criterion 8)."""
-    read = _make_reader()
+    read = _make_reader(command, state)
     ui.render(WELCOME)
 
     while True:

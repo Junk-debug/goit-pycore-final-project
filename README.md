@@ -58,6 +58,11 @@ action does not require.
 | `contact show <name>` | Print one contact with all of its fields |
 | `contact edit <name> [options]` | Change fields of an existing contact |
 | `contact delete <name>` | Remove a contact |
+| `note add <text> [options]` | Write a note |
+| `note show <id>` | Print one note in full |
+| `note list [options]` | List notes, narrowed by the options |
+| `note edit <id> [options]` | Change the text or the tags of a note |
+| `note delete <id> [--force]` | Remove a note |
 | `exit` | Leave the interactive session. Aliases: `quit`, `close` |
 | `web` | Start the web interface (not implemented yet) |
 
@@ -139,6 +144,65 @@ terminal — a piped or scripted run never deletes anything by default.
 ```bash
 assistant contact delete John --force
 ```
+
+### `note add`
+
+```
+note add <text> [--tag <tag>...]
+```
+
+Writes a note and reports the id the other commands address it by. Tags are
+optional; repeat the option or separate the keywords with commas.
+
+```bash
+assistant note add "Buy milk and bread"
+assistant note add "Read the pickle docs" --tag study --tag python
+assistant note add "Read the pickle docs" --tag "study,python"
+```
+
+### `note list`
+
+```
+note list [--query <text>] [--tag <tag>] [--sort tag|created|updated]
+```
+
+Lists the notes as a table, showing the first 60 characters of each. Without
+options it lists all of them; the options narrow the result and combine.
+`--query` matches a part of the text, `--tag` keeps the notes carrying that
+tag, and `--sort` orders them by their first tag or by time.
+
+```bash
+assistant note list
+assistant note list --query pickle
+assistant note list --tag python --sort updated
+```
+
+### `note show`, `note edit` and `note delete`
+
+```
+note show <id>
+note edit <id> [--text <text>] [--add-tag <tag>...] [--remove-tag <tag>...]
+note delete <id> [--force]
+```
+
+`note show` prints one note as a card, marking a note with no tags with a
+dash. `note edit` changes what the options name and nothing else, so adding
+and removing a tag in one call replaces it, and prints the same card after it
+runs, so the result of a change is always visible. `note delete` asks for
+confirmation unless `--force` is given, or the input is not a terminal — a
+piped or scripted run never deletes anything by default.
+
+```bash
+assistant note show 3
+assistant note edit 3 --text "Read the pickle and shelve docs"
+assistant note edit 3 --add-tag urgent --remove-tag draft
+assistant note delete 3 --force
+```
+
+| Field | Accepted |
+|-------|----------|
+| Text | Non-empty, at most 4096 characters |
+| Tag | One keyword without spaces, at most 32 characters, stored in lower case |
 
 ## Where the data is kept
 

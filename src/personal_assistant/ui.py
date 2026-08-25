@@ -1,8 +1,9 @@
 """Presentation layer.
 
-The only module that writes to the terminal. Commands decide what to say, this
-module decides how it looks, which keeps formatting out of the domain and out
-of the command bodies.
+The only module that writes to the terminal. Commands decide what to say,
+this module decides how it looks, which keeps formatting out of the domain
+and out of the command bodies; it is also what lets the planned web interface
+reuse the same commands unchanged (D8).
 
 Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 """
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from rich import box
 from rich.console import Console
@@ -22,9 +24,26 @@ from personal_assistant.types import Renderable
 
 _console = Console()
 
+DASH = "—"
+
+
+@dataclass(frozen=True)
+class Column:
+    """How one column of a table is presented.
+
+    A command describes its columns instead of formatting them itself, so
+    every table in the assistant is built the same way and the decisions that
+    depend on the terminal stay in this module.
+    """
+
+    header: str
+    style: str = ""
+    width: int | None = None
+    wrap: bool = True
+
 
 def render(result: Renderable) -> None:
-    """Print a line of text or a table.
+    """Print a line of text, a table, or a card.
 
     A plain string is printed verbatim, because `rich` would otherwise read
     square brackets as its own markup and colour arbitrary words on its own,
@@ -49,43 +68,37 @@ def failure(message: str) -> None:
 
 
 def table(
-    title: str, columns: Sequence[str], rows: Sequence[Sequence[object]]
+    title: str,
+    columns: Sequence[Column | str],
+    rows: Sequence[Sequence[object]],
 ) -> Table:
-    """Build a table for a command to hand to `render`."""
+    """Build a table for a command to hand to `render`.
+
+    A bare string stands for a column with no particular style, which keeps a
+    simple listing simple to write; `Column` is there for one that needs a
+    style, a fixed width or control over wrapping, as `note list` does.
+    """
+    described = [
+        column if isinstance(column, Column) else Column(column) for column in columns
+    ]
     built = Table(
-        title=title, box=box.ROUNDED, header_style="bold cyan", title_style="bold"
+        title=title,
+        box=box.ROUNDED,
+        title_justify="left",
+        title_style="bold",
+        header_style="bold cyan",
     )
-    for index, column in enumerate(columns):
-        # The first column holds the label of each row (a field name, a
-        # contact's name); bolding it reads as a key, not as emphasis on some
-        # rows over others the way alternating row colours would.
-        built.add_column(column, style="bold" if index == 0 else None)
+    for column in described:
+        built.add_column(
+            column.header,
+            style=column.style or None,
+            width=column.width,
+            no_wrap=not column.wrap,
+            overflow="fold" if column.wrap else "ellipsis",
+        )
     for row in rows:
         built.add_row(*[str(cell) for cell in row])
     return built
-
-
-def confirm(question: str) -> bool:
-    """Ask the user to confirm a destructive action.
-
-    Answers no whenever an answer cannot be read: input that is not a terminal
-    (a piped or scripted run has nobody to say yes), and Ctrl-D or Ctrl-C at the
-    prompt itself. A destructive action must never go ahead by default; `--force`
-    is the way to mean it.
-    """
-    if not sys.stdin.isatty():
-        return False
-
-    prompt = Text(question)
-    prompt.append(" [y/N] ", style="bold yellow")
-    try:
-        # A Text object, not an f-string: `question` may hold arbitrary data,
-        # such as a contact name, and Console.input parses markup in a plain
-        # string by default — the same trap render() guards against.
-        answer = _console.input(prompt)
-    except (EOFError, KeyboardInterrupt):
-        return False
-    return answer.strip().lower() in {"y", "yes"}
 
 
 def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
@@ -104,5 +117,28 @@ def card(title: str, fields: Sequence[tuple[str, str | None]]) -> Panel:
     grid.add_column(style="bold cyan", no_wrap=True)
     grid.add_column()
     for label, value in fields:
-        grid.add_row(label, value if value else "—")
+        grid.add_row(label, value if value else DASH)
     return Panel(grid, title=title, title_align="left", expand=False)
+
+
+def confirm(question: str) -> bool:
+    """Ask the user to confirm a destructive action (section 7.1).
+
+    Answers no whenever an answer cannot be read: input that is not a
+    terminal (a piped or scripted run has nobody to say yes), and Ctrl-D or
+    Ctrl-C at the prompt itself. A destructive action must never go ahead by
+    default; `--force` is the way to mean it.
+    """
+    if not sys.stdin.isatty():
+        return False
+
+    prompt = Text(question)
+    prompt.append(" [y/N] ", style="bold yellow")
+    try:
+        # A Text object, not an f-string: `question` may hold arbitrary data,
+        # such as a note's preview, and Console.input parses markup in a plain
+        # string by default — the same trap render() guards against.
+        answer = _console.input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer.strip().lower() in {"y", "yes"}
