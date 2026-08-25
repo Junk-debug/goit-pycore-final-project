@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any
 
 from personal_assistant.errors import CommandError, ExitLoop
+from personal_assistant.parser import ReplArgumentParser
 from personal_assistant.state import AppState
+from personal_assistant.types import Renderable, SubParsers
 
 
-def register(groups: argparse._SubParsersAction) -> None:
+def register(groups: SubParsers) -> None:
     """Add the global commands to the command tree."""
     help_parser = groups.add_parser("help", help="show the available commands")
     help_parser.add_argument(
-        "topic", nargs="?", metavar="<command>", help="show the help of one command"
+        "topic",
+        nargs="*",
+        metavar="<command>",
+        help="show the help of one command, for example 'help contact add'",
     )
     help_parser.set_defaults(handler=show_help)
 
@@ -26,25 +30,33 @@ def register(groups: argparse._SubParsersAction) -> None:
     web_parser.set_defaults(handler=start_web)
 
 
-def show_help(args: argparse.Namespace, state: AppState) -> Any:
-    """Print the whole command tree, or the help of one command."""
+def show_help(args: argparse.Namespace, state: AppState) -> Renderable:
+    """Print the whole command tree, or the help of one command.
+
+    The topic is a path, so `help contact add` reaches an action and shows the
+    options it accepts, which the group listing only names.
+    """
     from personal_assistant import commands
 
-    if args.topic is None:
-        return commands.root_parser().format_help().rstrip()
+    parser: argparse.ArgumentParser = commands.root_parser()
+    walked: list[str] = []
 
-    parser = commands.group_parser(args.topic)
-    if parser is None:
-        known = ", ".join(commands.group_names())
-        raise CommandError(f"Unknown command '{args.topic}'. Available: {known}.")
+    for step in args.topic:
+        child = parser.child(step) if isinstance(parser, ReplArgumentParser) else None
+        if child is None:
+            place = " ".join(walked) or "the assistant"
+            raise CommandError(f"'{step}' is not a command of {place}.")
+        parser = child
+        walked.append(step)
+
     return parser.format_help().rstrip()
 
 
-def leave(args: argparse.Namespace, state: AppState) -> Any:
+def leave(args: argparse.Namespace, state: AppState) -> Renderable:
     """Leave the interactive session; data is saved by the caller."""
     raise ExitLoop
 
 
-def start_web(args: argparse.Namespace, state: AppState) -> Any:
+def start_web(args: argparse.Namespace, state: AppState) -> Renderable:
     """Start the web interface once it exists (D8)."""
     return "The web interface is not implemented yet."
