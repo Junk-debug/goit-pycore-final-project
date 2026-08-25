@@ -104,9 +104,7 @@ def register(app: typer.Typer) -> None:
                 "days from today",
             ),
         ] = None,
-        sort: Annotated[
-            SortKey | None, typer.Option(help="order the results")
-        ] = None,
+        sort: Annotated[SortKey | None, typer.Option(help="order the results")] = None,
     ) -> None:
         """list and filter contacts"""
         if birthday_in is not None and birthday_in < 0:
