@@ -112,3 +112,54 @@ def test_one_bad_number_among_several_is_reported(command, state, capsys) -> Non
         == 1
     )
     assert "oops" in capsys.readouterr().out
+
+
+class TestShow:
+    def test_every_field_is_printed(self, command, state, capsys) -> None:
+        run(
+            command,
+            state,
+            "contact",
+            "add",
+            "John",
+            "--phone",
+            "+48123456789",
+            "--email",
+            "john@example.com",
+            "--address",
+            "Dluga 5",
+            "--birthday",
+            "12.05.1998",
+        )
+        capsys.readouterr()
+
+        assert run(command, state, "contact", "show", "John") == 0
+
+        printed = capsys.readouterr().out
+        for expected in (
+            "John",
+            "+48123456789",
+            "john@example.com",
+            "Dluga 5",
+            "12.05.1998",
+        ):
+            assert expected in printed
+
+    def test_a_field_that_is_not_set_is_marked_as_empty(
+        self, command, state, capsys
+    ) -> None:
+        run(command, state, "contact", "add", "Zoe")
+        capsys.readouterr()
+
+        run(command, state, "contact", "show", "Zoe")
+
+        assert "—" in capsys.readouterr().out
+
+    def test_the_name_is_matched_whatever_the_case(self, command, state) -> None:
+        run(command, state, "contact", "add", "John")
+
+        assert run(command, state, "contact", "show", "john") == 0
+
+    def test_an_unknown_name_is_reported(self, command, state, capsys) -> None:
+        assert run(command, state, "contact", "show", "Nobody") == 1
+        assert "No contact named 'Nobody'" in capsys.readouterr().out

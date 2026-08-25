@@ -55,6 +55,7 @@ action does not require.
 | `help` | List the available commands |
 | `help <command>...` | Explain one command, for example `help contact add` |
 | `contact add <name> [options]` | Create a contact |
+| `contact show <name>` | Print one contact with all of its fields |
 | `exit` | Leave the interactive session. Aliases: `quit`, `close` |
 | `web` | Start the web interface (not implemented yet) |
 
@@ -89,6 +90,19 @@ $ assistant contact add John --phone 123
 | Email | `name@domain.tld` |
 | Address | Non-empty, at most 128 characters |
 | Birthday | `DD.MM.YYYY`, a real date, not in the future, 1900 or later |
+
+### `contact show`
+
+```
+contact show <name>
+```
+
+Prints one contact as a table, marking a field that is not set with a dash. The
+name is matched without regard to case.
+
+```bash
+assistant contact show John
+```
 
 ## Where the data is kept
 
