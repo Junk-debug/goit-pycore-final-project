@@ -8,7 +8,7 @@ import pytest
 
 from personal_assistant.errors import ValidationError
 from personal_assistant.models.address import Address
-from personal_assistant.models.address_book import AddressBook
+from personal_assistant.models.address_book import AddressBook, SortKey
 from personal_assistant.models.birthday import Birthday
 from personal_assistant.models.contact import Contact
 from personal_assistant.models.email import Email
@@ -294,3 +294,104 @@ class TestAddressBook:
         assert book.delete("john") is True
         assert book.delete("john") is False
         assert book.find("John") is None
+
+    def test_adding_a_duplicate_name_is_refused(self) -> None:
+        book = AddressBook()
+        book.add(Contact("John"))
+
+        with pytest.raises(ValidationError):
+            book.add(Contact("john"))
+        assert len(book) == 1
+
+
+class TestAddressBookSelect:
+    """`AddressBook.select` backs `contact list`, shared with the web adapter."""
+
+    TODAY = date(2026, 8, 25)  # a Tuesday
+
+    def test_without_options_everyone_is_returned(self) -> None:
+        book = AddressBook()
+        book.add(Contact("John"))
+        book.add(Contact("Anna"))
+
+        assert {str(c.name) for c in book.select()} == {"John", "Anna"}
+
+    def test_a_query_narrows_by_any_field(self) -> None:
+        book = AddressBook()
+        matching = Contact("John")
+        matching.set_address("Dluga 5, Gdansk")
+        book.add(matching)
+        book.add(Contact("Anna"))
+
+        result = book.select(query="gdansk")
+
+        assert [str(c.name) for c in result] == ["John"]
+
+    def test_sort_by_name_is_alphabetical_and_case_insensitive(self) -> None:
+        book = AddressBook()
+        book.add(Contact("zoe"))
+        book.add(Contact("Anna"))
+
+        result = book.select(sort=SortKey.NAME)
+
+        assert [str(c.name) for c in result] == ["Anna", "zoe"]
+
+    def test_sort_by_birthday_puts_the_soonest_first(self) -> None:
+        book = AddressBook()
+        later = Contact("Later")
+        later.set_birthday("01.09.1990")
+        sooner = Contact("Sooner")
+        sooner.set_birthday("27.08.1990")
+        book.add(later)
+        book.add(sooner)
+
+        result = book.select(sort=SortKey.BIRTHDAY, today=self.TODAY)
+
+        assert [str(c.name) for c in result] == ["Sooner", "Later"]
+
+    def test_sort_by_birthday_puts_a_birthday_less_contact_last(self) -> None:
+        book = AddressBook()
+        book.add(Contact("Zoe"))
+        with_birthday = Contact("Anna")
+        with_birthday.set_birthday("27.08.1990")
+        book.add(with_birthday)
+
+        result = book.select(sort=SortKey.BIRTHDAY, today=self.TODAY)
+
+        assert [str(c.name) for c in result] == ["Anna", "Zoe"]
+
+    def test_birthday_in_keeps_only_upcoming_birthdays(self) -> None:
+        book = AddressBook()
+        soon = Contact("Soon")
+        soon.set_birthday("27.08.1990")
+        far = Contact("Far")
+        far.set_birthday("01.01.1990")
+        book.add(soon)
+        book.add(far)
+        book.add(Contact("NoBirthday"))
+
+        result = book.select(birthday_in=7, today=self.TODAY)
+
+        assert [str(c.name) for c in result] == ["Soon"]
+
+    def test_a_negative_window_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            AddressBook().select(birthday_in=-1)
+
+    def test_query_and_birthday_in_combine(self) -> None:
+        book = AddressBook()
+        matching = Contact("John")
+        matching.set_birthday("27.08.1990")
+        matching.set_address("Gdansk")
+        book.add(matching)
+        wrong_place = Contact("Anna")
+        wrong_place.set_birthday("27.08.1990")
+        book.add(wrong_place)
+
+        result = book.select(query="gdansk", birthday_in=7, today=self.TODAY)
+
+        assert [str(c.name) for c in result] == ["John"]
+
+    def test_an_unknown_sort_key_is_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            AddressBook().select(sort="nonsense")
