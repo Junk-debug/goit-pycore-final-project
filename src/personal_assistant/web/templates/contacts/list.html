@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+  <div class="row">
+    <h1>Contacts</h1>
+    <a class="button primary" href="{{ url_for('new_contact_form') }}">+ Add contact</a>
+  </div>
+
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <form class="filters" method="get">
+    <input type="text" name="query" value="{{ query }}" placeholder="Search name, phone, email, address" style="min-width: 16rem;">
+    <input type="number" name="birthday_in" value="{{ birthday_in }}" min="0" placeholder="Birthday within, days" style="width: 12rem">
+    <select name="sort">
+      <option value="">Sort…</option>
+      {% for key in sort_keys %}
+        <option value="{{ key }}" {{ "selected" if sort == key }}>{{ key|capitalize }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Apply</button>
+  </form>
+
+  {% if contacts %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Phones</th><th>Email</th><th>Birthday</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for contact in contacts %}
+            <tr>
+              <td>
+                <div class="name-cell">
+                  <div class="avatar">{{ contact.name.value[0]|upper }}</div>
+                  <a href="{{ url_for('show_contact', name=contact.name.value) }}">{{ contact.name }}</a>
+                </div>
+              </td>
+              <td class="muted">{{ contact.phones|map('string')|join(', ') or '—' }}</td>
+              <td class="muted">{{ contact.email or '—' }}</td>
+              <td class="muted">{{ contact.birthday or '—' }}</td>
+              <td><a href="{{ url_for('edit_contact_form', name=contact.name.value) }}">Edit</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>
+      </svg>
+      <div>{{ "No contacts yet." if not query and not birthday_in else "No contacts match." }}</div>
+    </div>
+  {% endif %}
+{% endblock %}

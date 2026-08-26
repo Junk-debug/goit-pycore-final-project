@@ -74,6 +74,17 @@ class Note:
         self.tags = (self.tags - removed) | added
         self.touch()
 
+    def set_tags(self, tags: Iterable[str]) -> None:
+        """Replace every tag with a freshly validated set (T1).
+
+        `edit(add=..., remove=...)` is what the CLI's paired options use
+        (D19); this is the same operation for a caller that already knows the
+        full set it wants, such as a single web form field. A set silently
+        collapses a repeated tag, which matches how `add` already behaves.
+        """
+        self.tags = {Tag(tag) for tag in tags}
+        self.touch()
+
     def touch(self) -> None:
         """Record that the note has just been changed."""
         self.updated = datetime.now()

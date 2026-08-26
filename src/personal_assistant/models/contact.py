@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from personal_assistant.errors import ValidationError
 from personal_assistant.models.address import Address
 from personal_assistant.models.birthday import Birthday
@@ -48,6 +50,23 @@ class Contact:
         if phone is None:
             raise ValidationError(f"{self.name} has no number {raw}.")
         self.phones.remove(phone)
+
+    def set_phones(self, numbers: Iterable[str]) -> None:
+        """Replace every phone number with a freshly validated list.
+
+        `add_phone`/`remove_phone` are what the CLI's paired `--add-phone` and
+        `--remove-phone` options use (D19); this is the same operation for a
+        caller that already knows the full list it wants, such as a single web
+        form field. Every value is validated before anything is written, so an
+        invalid or repeated number leaves the contact's phones untouched.
+        """
+        parsed: list[Phone] = []
+        for raw in numbers:
+            phone = Phone(raw)
+            if phone in parsed:
+                raise ValidationError(f"'{phone}' was given more than once.")
+            parsed.append(phone)
+        self.phones = parsed
 
     def rename(self, raw: str) -> None:
         self.name = Name(raw)

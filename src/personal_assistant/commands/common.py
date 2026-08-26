@@ -44,9 +44,27 @@ def register(app: typer.Typer) -> None:
         raise ExitLoop
 
     @app.command("web")
-    def start_web() -> None:
+    def start_web(ctx: typer.Context) -> None:
         """start the web interface"""
-        ui.render("The web interface is not implemented yet.")
+        try:
+            from personal_assistant.web.app import create_app
+        except ImportError:
+            ui.failure(
+                "The web interface needs Flask, which is not installed.\n"
+                "Install it with: pip install -e '.[web]'"
+            )
+            return
+
+        import webbrowser
+
+        host, port = "127.0.0.1", 5050
+        url = f"http://{host}:{port}/"
+        ui.success(f"Serving on {url} — press Ctrl-C to return to the assistant.")
+        webbrowser.open(url)
+        try:
+            create_app(ctx.obj).run(host=host, port=port, debug=False)
+        except KeyboardInterrupt:
+            ui.render("Stopped the web interface.")
 
 
 class ShowHelp(Exception):

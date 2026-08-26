@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from enum import Enum
 from typing import Annotated
 
 import typer
@@ -11,18 +10,11 @@ from rich.table import Table
 
 from personal_assistant import ui
 from personal_assistant.errors import NotFoundError, ValidationError
-from personal_assistant.models.address_book import AddressBook
+from personal_assistant.models.address_book import AddressBook, SortKey
 from personal_assistant.models.birthday import FORMAT as BIRTHDAY_FORMAT
 from personal_assistant.models.contact import Contact
 from personal_assistant.state import AppState
 from personal_assistant.values import commas
-
-
-class SortKey(str, Enum):
-    """The two ways `contact list` can order its results."""
-
-    name = "name"
-    birthday = "birthday"
 
 
 def register(app: typer.Typer) -> None:
@@ -56,9 +48,6 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """create a contact"""
         book = ctx.obj.section(AddressBook)
-        if book.find(name) is not None:
-            raise ValidationError(f"A contact named '{name}' already exists.")
-
         contact = Contact(name)
         for number in commas(phone):
             contact.add_phone(number)
@@ -107,27 +96,11 @@ def register(app: typer.Typer) -> None:
         sort: Annotated[SortKey | None, typer.Option(help="order the results")] = None,
     ) -> None:
         """list and filter contacts"""
-        if birthday_in is not None and birthday_in < 0:
-            raise ValidationError("--birthday-in must not be negative.")
-
         book = ctx.obj.section(AddressBook)
         today = date.today()
-        results = list(book.values())
-
-        if query is not None:
-            results = [contact for contact in results if contact.matches(query)]
-        if birthday_in is not None:
-            results = [
-                contact
-                for contact in results
-                if contact.birthday is not None
-                and _days_until(contact, today) <= birthday_in
-            ]
-
-        if sort is SortKey.name:
-            results.sort(key=lambda contact: str(contact.name).casefold())
-        elif sort is SortKey.birthday:
-            results.sort(key=lambda contact: _sort_key_birthday(contact, today))
+        results = book.select(
+            query=query, birthday_in=birthday_in, sort=sort, today=today
+        )
 
         if not results:
             ui.render("No contacts yet." if not book else "No contacts match.")
@@ -246,22 +219,6 @@ def _fields(contact: Contact) -> list[tuple[str, str | None]]:
         ("Address", str(contact.address) if contact.address else None),
         ("Birthday", str(contact.birthday) if contact.birthday else None),
     ]
-
-
-def _days_until(contact: Contact, today: date) -> int:
-    """Days from `today` until `contact`'s next birthday greeting.
-
-    Only meaningful once the caller has checked the contact has a birthday.
-    """
-    assert contact.birthday is not None
-    return (contact.birthday.next_greeting(today) - today).days
-
-
-def _sort_key_birthday(contact: Contact, today: date) -> date:
-    """A birthday-less contact sorts after every contact with one."""
-    if contact.birthday is None:
-        return date.max
-    return contact.birthday.next_greeting(today)
 
 
 def _table(contacts: list[Contact], today: date, *, show_greeting: bool) -> Table:

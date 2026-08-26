@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name }}{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="hero">
+      <div class="avatar">{{ contact.name.value[0]|upper }}</div>
+      <h1>{{ contact.name }}</h1>
+    </div>
+    <div class="stack">
+      <a class="button" href="{{ url_for('edit_contact_form', name=contact.name.value) }}">Edit</a>
+      <form class="inline" method="post" action="{{ url_for('delete_contact', name=contact.name.value) }}"
+            onsubmit="return confirm('Delete {{ contact.name }} and all its data?');">
+        <button class="danger" type="submit">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <dl class="fields">
+      <dt>Phones</dt><dd>{{ contact.phones|map('string')|join(', ') or '—' }}</dd>
+      <dt>Email</dt><dd>{{ contact.email or '—' }}</dd>
+      <dt>Address</dt><dd>{{ contact.address or '—' }}</dd>
+      <dt>Birthday</dt><dd>{{ contact.birthday or '—' }}</dd>
+    </dl>
+  </div>
+
+  <p><a href="{{ url_for('list_contacts') }}">&larr; Back to contacts</a></p>
+{% endblock %}
