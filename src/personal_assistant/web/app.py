@@ -25,6 +25,17 @@ from personal_assistant.state import AppState
 from personal_assistant.values import commas
 
 
+def _is_htmx(req: object) -> bool:
+    """Whether the request came from htmx, rather than a full page load.
+
+    htmx marks every request it sends with this header. A route uses it to
+    decide between returning a whole page and returning just the fragment
+    htmx will swap in, and between redirecting a full navigation and simply
+    reporting success so htmx can remove the row it deleted in place.
+    """
+    return request.headers.get("HX-Request") == "true"
+
+
 def _iso_to_domain(raw: str) -> str:
     """Convert a date input's ISO value to the domain's DD.MM.YYYY.
 
@@ -97,8 +108,11 @@ def create_app(state: AppState) -> Flask:
                 if isinstance(caught, AssistantError)
                 else ("The birthday window must be a whole number of days.")
             )
+        template = (
+            "contacts/_results.html" if _is_htmx(request) else "contacts/list.html"
+        )
         return render_template(
-            "contacts/list.html",
+            template,
             contacts=contacts,
             query=query or "",
             sort=sort or "",
@@ -166,9 +180,13 @@ def create_app(state: AppState) -> Flask:
             )
         return redirect(url_for("show_contact", name=contact.name.value))
 
-    @app.post("/contacts/<name>/delete")
+    @app.route("/contacts/<name>/delete", methods=["POST", "DELETE"])
     def delete_contact(name: str) -> ResponseReturnValue:
         state.section(AddressBook).delete(name)
+        if _is_htmx(request):
+            # An empty body swapped into the deleted row's place removes it;
+            # nowhere to redirect to when we never left the list page.
+            return ""
         return redirect(url_for("list_contacts"))
 
     # --- Notes --------------------------------------------------------------
@@ -184,8 +202,9 @@ def create_app(state: AppState) -> Flask:
             error = None
         except AssistantError as caught:
             notes, error = [], str(caught)
+        template = "notes/_results.html" if _is_htmx(request) else "notes/list.html"
         return render_template(
-            "notes/list.html",
+            template,
             notes=notes,
             query=query or "",
             tag=tag or "",
@@ -234,9 +253,11 @@ def create_app(state: AppState) -> Flask:
             return _form_error("notes/form.html", error, note=note, values=form)
         return redirect(url_for("show_note", note_id=note.id))
 
-    @app.post("/notes/<int:note_id>/delete")
+    @app.route("/notes/<int:note_id>/delete", methods=["POST", "DELETE"])
     def delete_note(note_id: int) -> ResponseReturnValue:
         state.section(NoteBook).remove(note_id)
+        if _is_htmx(request):
+            return ""
         return redirect(url_for("list_notes"))
 
     def _contact_or_404(name: str) -> Contact:

@@ -1,0 +1,31 @@
+{% if notes %}
+  <div class="note-grid">
+    {% for note in notes %}
+      <div class="note-card">
+        <a class="note-card-link" href="{{ url_for('show_note', note_id=note.id) }}">
+          <div class="preview">{{ note.preview() }}</div>
+        </a>
+        <div class="tags">
+          {% for name in note.tag_names() %}<span class="tag">{{ name }}</span>{% endfor %}
+        </div>
+        <div class="foot">
+          <div class="meta">Updated {{ note.stamp(note.updated) }}</div>
+          <button
+            class="danger"
+            hx-delete="{{ url_for('delete_note', note_id=note.id) }}"
+            hx-target="closest .note-card"
+            hx-swap="outerHTML swap:200ms"
+            hx-confirm="Delete note {{ note.id }}?"
+          >Delete</button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M6 4h9l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M9 10h6M9 14h6"/>
+    </svg>
+    <div>{{ "No notes yet." if not query and not tag else "No note matches." }}</div>
+  </div>
+{% endif %}

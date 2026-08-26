@@ -8,7 +8,14 @@
 
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
-  <form class="filters" method="get">
+  <form
+    class="filters"
+    hx-get="{{ url_for('list_notes') }}"
+    hx-target="#note-results"
+    hx-swap="innerHTML"
+    hx-trigger="input changed delay:400ms from:input, change from:select"
+    hx-push-url="true"
+  >
     <input type="text" name="query" value="{{ query }}" placeholder="Search text" style="min-width: 14rem;">
     <input type="text" name="tag" value="{{ tag }}" list="known-tags" placeholder="Filter by tag">
     <datalist id="known-tags">
@@ -20,27 +27,10 @@
         <option value="{{ key }}" {{ "selected" if sort == key }}>{{ key|capitalize }}</option>
       {% endfor %}
     </select>
-    <button type="submit">Apply</button>
+    <noscript><button type="submit">Apply</button></noscript>
   </form>
 
-  {% if notes %}
-    <div class="note-grid">
-      {% for note in notes %}
-        <a class="note-card" href="{{ url_for('show_note', note_id=note.id) }}">
-          <div class="preview">{{ note.preview() }}</div>
-          <div class="tags">
-            {% for name in note.tag_names() %}<span class="tag">{{ name }}</span>{% endfor %}
-          </div>
-          <div class="meta">Updated {{ note.stamp(note.updated) }}</div>
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="empty">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M6 4h9l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M9 10h6M9 14h6"/>
-      </svg>
-      <div>{{ "No notes yet." if not query and not tag else "No note matches." }}</div>
-    </div>
-  {% endif %}
+  <div id="note-results">
+    {% include "notes/_results.html" %}
+  </div>
 {% endblock %}
