@@ -10,6 +10,7 @@ Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -22,6 +23,30 @@ from rich.text import Text
 
 from personal_assistant.types import Renderable
 
+MIN_WIDTH = 100
+
+
+def _ensure_a_sane_width() -> None:
+    """Give a floor to the width rendering is measured against.
+
+    A real terminal is left alone: interactive use should wrap to whatever the
+    user's window actually is. Without one — piped output, a redirect, a CI
+    runner, this test suite — `rich` and `typer` fall back to `COLUMNS`, and
+    some environments report it too narrow to hold even a single flag's own
+    name, wrapping `--phone` across lines and making it vanish from a plain
+    substring search. The floor is enforced, not just filled in when absent,
+    because the narrow value seen in CI could equally be an explicit `COLUMNS`
+    as an absent one falling back to something small; either way, nothing
+    without a real terminal should render narrower than this.
+    """
+    if sys.stdout.isatty():
+        return
+    ambient = os.environ.get("COLUMNS", "")
+    if not (ambient.isdigit() and int(ambient) >= MIN_WIDTH):
+        os.environ["COLUMNS"] = str(MIN_WIDTH)
+
+
+_ensure_a_sane_width()
 _console = Console()
 
 DASH = "—"
