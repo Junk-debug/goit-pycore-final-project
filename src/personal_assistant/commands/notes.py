@@ -1,8 +1,8 @@
 """The `note` command group: notes, their tags and what you do to them.
 
-Covers N1 to N4 and the optional tag scope T1 to T3. The group builds its own
-application and keeps the notes in its own section of the state, so adding a
-command here never touches a file another group owns.
+The group builds its own application and keeps the notes in its own section
+of the state, so adding a command here never touches a file another group
+owns.
 """
 
 from __future__ import annotations

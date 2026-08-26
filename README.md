@@ -31,7 +31,13 @@ Started without arguments, the assistant reads commands until you leave:
 $ assistant
 Personal assistant. Type 'help' to see the commands, 'exit' to leave.
 assistant> contact add John --phone +48123456789
-Added John; phones: +48123456789.
+Added John.
+╭─ John ─────────────────╮
+│ Phones    +48123456789 │
+│ Email     —            │
+│ Address   —            │
+│ Birthday  —            │
+╰────────────────────────╯
 assistant> exit
 Good bye!
 ```
@@ -65,7 +71,7 @@ action does not require.
 | `note edit <id> [options]` | Change the text or the tags of a note |
 | `note delete <id> [--force]` | Remove a note |
 | `exit` | Leave the interactive session. Aliases: `quit`, `close` |
-| `web` | Start the web interface (not implemented yet) |
+| `web` | Start the browser interface |
 
 ### `contact add`
 
@@ -226,6 +232,28 @@ assistant note delete 3 --force
 | Text | Non-empty, at most 4096 characters |
 | Tag | One keyword without spaces, at most 32 characters, stored in lower case |
 
+### `web`
+
+```
+web
+```
+
+Starts a local server and opens the browser to it. It shows the same
+contacts and notes as the command line, with the same validation, since both
+interfaces read and write the same data.
+
+Needs Flask, which is an optional extra rather than part of the base install:
+
+```bash
+pip install -e ".[web]"
+```
+
+Without it, `web` explains how to install the extra instead of failing.
+
+```bash
+assistant web
+```
+
 ## Where the data is kept
 
 Contacts and notes are stored in your home directory, in
@@ -235,7 +263,8 @@ read is moved aside rather than deleted, and the assistant starts empty.
 
 ## Development
 
-Install the project together with the developer tools:
+Install the project together with the developer tools, which already include
+the web extra:
 
 ```bash
 pip install -e ".[dev]"
@@ -262,7 +291,3 @@ export PERSONAL_ASSISTANT_DATA=/tmp/assistant-dev.pkl
 ```
 
 Delete that file to start from an empty state.
-
-## Team
-
-<!-- TODO: members and roles -->

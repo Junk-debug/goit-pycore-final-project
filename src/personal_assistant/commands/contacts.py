@@ -226,7 +226,7 @@ def _table(contacts: list[Contact], today: date, *, show_greeting: bool) -> Tabl
 
     `show_greeting` adds a column for the (possibly weekend-shifted) date
     each birthday is next celebrated, since `--birthday-in` is what makes
-    that date relevant (C5).
+    that date relevant.
     """
     columns = ["Name", "Phones", "Email", "Address", "Birthday"]
     if show_greeting:

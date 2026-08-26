@@ -3,7 +3,7 @@
 Every question an interface asks about the book as a whole — is this name
 taken, which contacts match a search, in what order should they be shown — is
 answered here, mirroring `NoteBook`. Both adapters therefore share the same
-answers instead of each working them out again (D8).
+answers instead of each working them out again.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from personal_assistant.models.contact import Contact
 
 
 class SortKey(str, Enum):
-    """The two ways `contact list` can order its results (C2, C5)."""
+    """The two ways `contact list` can order its results."""
 
     NAME = "name"
     BIRTHDAY = "birthday"
@@ -80,7 +80,7 @@ class AddressBook(UserDict[str, Contact]):
         """The contacts a `contact list` invocation asks for.
 
         Every criterion narrows the previous result, so the options combine
-        instead of competing (D17): a search and a birthday window may be
+        instead of competing: a search and a birthday window may be
         given together. Ascending order throughout; a contact with no
         birthday sorts last under `--sort birthday`, since there is nothing to
         order it by.

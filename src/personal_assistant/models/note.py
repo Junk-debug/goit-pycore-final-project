@@ -1,4 +1,4 @@
-"""The note itself: text and the tags describing it, nothing else (D18)."""
+"""The note itself: text and the tags describing it, nothing else."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ class NoteText(Field[str]):
     """The textual content of a note."""
 
     def parse(self, raw: str) -> str:
-        """Validate the text of a note (D20)."""
         if not raw:
             raise ValidationError("A note cannot be empty.")
         if len(raw) > MAX_LENGTH:
@@ -38,7 +37,7 @@ class Note:
     or a tag that was never checked.
 
     The id is assigned by the notebook and never changes, which keeps the
-    commands addressing a note working while its text is edited (D16).
+    commands addressing a note working while its text is edited.
     """
 
     def __init__(self, note_id: int, text: str, tags: Iterable[str] = ()) -> None:
@@ -55,11 +54,11 @@ class Note:
         add: Iterable[str] = (),
         remove: Iterable[str] = (),
     ) -> None:
-        """Apply the changes of one `note edit` invocation (N3, T1).
+        """Apply the changes of one `note edit` invocation.
 
         Every value is validated before anything is written, so a rejected tag
-        cannot leave the note half-edited. Adding and removing in the same call
-        therefore replaces a tag atomically, which is what D19 promises.
+        cannot leave the note half-edited, and adding and removing in the same
+        call replaces a tag atomically.
         """
         replacement = NoteText(text) if text is not None else None
         added = {Tag(tag) for tag in add}
@@ -75,12 +74,12 @@ class Note:
         self.touch()
 
     def set_tags(self, tags: Iterable[str]) -> None:
-        """Replace every tag with a freshly validated set (T1).
+        """Replace every tag with a freshly validated set.
 
-        `edit(add=..., remove=...)` is what the CLI's paired options use
-        (D19); this is the same operation for a caller that already knows the
-        full set it wants, such as a single web form field. A set silently
-        collapses a repeated tag, which matches how `add` already behaves.
+        `edit(add=..., remove=...)` is what the CLI's paired options use; this
+        is the same operation for a caller that already knows the full set it
+        wants, such as a single web form field. A set silently collapses a
+        repeated tag, which matches how `add` already behaves.
         """
         self.tags = {Tag(tag) for tag in tags}
         self.touch()
@@ -90,11 +89,11 @@ class Note:
         self.updated = datetime.now()
 
     def has_tag(self, tag: str) -> bool:
-        """Whether the note carries that tag, however it was capitalised (T2)."""
+        """Whether the note carries that tag, however it was capitalised."""
         return Tag(tag) in self.tags
 
     def matches(self, query: str) -> bool:
-        """Whether the text contains the query, ignoring case (N2)."""
+        """Whether the text contains the query, ignoring case."""
         return query.strip().lower() in self.text.value.lower()
 
     def tag_names(self) -> list[str]:
@@ -104,14 +103,14 @@ class Note:
     def first_tag(self) -> str | None:
         """The alphabetically first tag, or None when the note has none.
 
-        This is what `note list --sort tag` orders by (T3): a note carries
-        several tags, so one of them has to speak for it.
+        This is what `note list --sort tag` orders by: a note carries several
+        tags, so one of them has to speak for it.
         """
         names = self.tag_names()
         return names[0] if names else None
 
     def preview(self, width: int = PREVIEW_LENGTH) -> str:
-        """The opening of the text on a single line, for a listing (D18)."""
+        """The opening of the text on a single line, for a listing."""
         single_line = " ".join(self.text.value.split())
         if len(single_line) <= width:
             return single_line

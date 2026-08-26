@@ -3,7 +3,7 @@
 Every route does what a command does: read the state, call a model method,
 show the result. The model methods already carry the rules — a duplicate
 name, an unknown id, a bad phone number — so no route repeats what
-`commands/contacts.py` or `commands/notes.py` already established (D8). The
+`commands/contacts.py` or `commands/notes.py` already established. The
 one thing genuinely new here is turning a caught `AssistantError` into a
 re-rendered form instead of a printed line.
 """

@@ -1,6 +1,6 @@
 """Entry point of the command-line interface.
 
-Two modes share one application and one set of commands, as decided in D5:
+Two modes share one application and one set of commands:
 
     assistant                       the interactive loop, the default
     assistant contact add John      a single command, then exit
@@ -68,7 +68,7 @@ def _make_reader(command: TyperGroup, state: AppState) -> Callable[[], str]:
 
     Uses `prompt_toolkit` for completion and history when it is installed and
     the input really comes from a terminal, and falls back to `input` in every
-    other case, per D21. The terminal check matters when the commands are piped
+    other case. The terminal check matters when the commands are piped
     in, which is how the tests and any scripted demo drive the assistant.
     """
     if not sys.stdin.isatty():

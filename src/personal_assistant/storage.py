@@ -1,9 +1,8 @@
 """Persistence of the application state.
 
 The whole state is serialised with pickle into a single file inside the user's
-home directory, as decided in D11 and required by P1. The working directory is
-deliberately not used: the command is callable from anywhere, so it is not a
-stable location.
+home directory. The working directory is deliberately not used: the command
+is callable from anywhere, so it is not a stable location.
 """
 
 from __future__ import annotations
@@ -22,9 +21,9 @@ ENV_DATA_FILE = "PERSONAL_ASSISTANT_DATA"
 def default_path() -> Path:
     """Where the state lives.
 
-    Normally the file inside the user's home directory required by P1. The
-    `{ENV_DATA_FILE}` environment variable overrides it, which keeps a
-    development session from writing over real data.
+    Normally the file inside the user's home directory. The
+    `PERSONAL_ASSISTANT_DATA` environment variable overrides it, which keeps
+    a development session from writing over real data.
     """
     override = os.environ.get(ENV_DATA_FILE)
     return Path(override).expanduser() if override else DATA_FILE

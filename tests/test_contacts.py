@@ -332,7 +332,7 @@ class TestEdit:
 
 
 class TestList:
-    """`contact list` covers C2 (search) and C5 (birthday window)."""
+    """Tests for filtering, sorting and the upcoming-birthday window."""
 
     # A fixed Tuesday, so a birthday falling on the following Saturday or
     # Sunday reliably exercises the weekend shift regardless of when the
@@ -441,7 +441,7 @@ class TestList:
         self, command, state, capsys
     ) -> None:
         # 30.08.1990 falls on a Sunday relative to TODAY (25.08.2026, a
-        # Tuesday); C5 requires the greeting to move to the Monday.
+        # Tuesday); the greeting must move to the Monday.
         run(command, state, "contact", "add", "Anna", "--birthday", "30.08.1990")
         capsys.readouterr()
 

@@ -6,7 +6,7 @@ completion for it for free, and the proposals cannot drift away from what the
 assistant actually accepts, which is what makes them worth offering at all
 (criterion 7).
 
-`prompt_toolkit` is optional by D21: importing this module fails when it is
+`prompt_toolkit` is optional: importing this module fails when it is
 missing, and the interactive session then reads plain lines instead.
 """
 
@@ -29,12 +29,12 @@ AnyCommand: TypeAlias = "TyperCommand | TyperGroup"
 LONG_OPTION = "--"
 
 # The topic of `help` is a path through the command tree rather than a value
-# of its own (D25), so completing it is completing that path once more.
+# of its own, so completing it is completing that path once more.
 HELP = "help"
 
 
 def known_tags(state: AppState) -> Sequence[str]:
-    """The tags already in use, so `--tag` proposes real ones (T2, T3)."""
+    """The tags already in use, so `--tag` proposes real ones."""
     return state.section(NoteBook).tags()
 
 
@@ -102,7 +102,6 @@ class CommandCompleter(Completer):
 
 
 def build_completer(root: TyperGroup, state: AppState) -> Completer:
-    """The completer the interactive session installs (D21)."""
     return CommandCompleter(root, state)
 
 

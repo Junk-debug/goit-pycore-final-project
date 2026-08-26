@@ -1,10 +1,10 @@
 """The collection of notes, and the state section the note commands own.
 
-The notebook is a mapping from the numeric id of a note to the note itself
-(D16). Inheriting from `UserDict` gives it everything a mapping already knows —
+The notebook is a mapping from the numeric id of a note to the note itself.
+Inheriting from `UserDict` gives it everything a mapping already knows —
 iteration, `len`, membership — so this class only adds what a notebook does on
 top of a dictionary: it hands out ids, and it answers the questions the `note
-list` command asks (N2, T2, T3).
+list` command asks.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from personal_assistant.models.tag import Tag
 
 
 class SortKey(str, Enum):
-    """The orders `note list --sort` accepts (T3).
+    """The orders `note list --sort` accepts.
 
     Spelled as a string enumeration so that the command line validates the
     value before it reaches the notebook, while the notebook keeps taking a
@@ -51,14 +51,14 @@ class NoteBook(UserDict[int, Note]):
         raise NotFoundError(f"There is no note with id {note_id}.")
 
     def add(self, text: str, tags: Iterable[str] = ()) -> Note:
-        """Write a new note and return it, with the id it received (N1, T1)."""
+        """Write a new note and return it, with the id it received."""
         note = Note(self._next_id(), text, tags)
         self._last_id = note.id
         self.data[note.id] = note
         return note
 
     def remove(self, note_id: int) -> Note:
-        """Delete a note and return it, or report that there is none (N4)."""
+        """Delete a note and return it, or report that there is none."""
         note = self[note_id]
         del self.data[note_id]
         return note
@@ -73,7 +73,7 @@ class NoteBook(UserDict[int, Note]):
         """The notes a `note list` invocation asks for.
 
         Every criterion narrows the previous result, so the options combine
-        instead of competing (D17). Ordering is ascending throughout: notes
+        instead of competing. Ordering is ascending throughout: notes
         without a tag come last, because there is nothing to order them by.
         """
         chosen = list(self.data.values())
@@ -105,12 +105,12 @@ class NoteBook(UserDict[int, Note]):
 
         Counting from the notes alone would give the id of a deleted note to
         the next one written, and every command that names an id would then
-        point at a different note than the user remembers (D16).
+        point at a different note than the user remembers.
         """
         return max([self._last_id, *self.data]) + 1
 
 
 def _by_tag(note: Note) -> tuple[bool, str, int]:
-    """Order by the first tag, keeping untagged notes at the end (T3)."""
+    """Order by the first tag, keeping untagged notes at the end."""
     first = note.first_tag()
     return (first is None, first or "", note.id)
