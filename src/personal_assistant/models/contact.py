@@ -16,9 +16,9 @@ class Contact:
     """One contact, composed of validated fields.
 
     The contact holds several phone numbers and at most one email, address and
-    birthday, as decided in D15. It never validates anything itself: each field
-    class does that when it is constructed, so a contact can only ever be built
-    from valid values.
+    birthday. It never validates anything itself: each field class does that
+    when it is constructed, so a contact can only ever be built from valid
+    values.
     """
 
     def __init__(self, name: str) -> None:
@@ -55,9 +55,9 @@ class Contact:
         """Replace every phone number with a freshly validated list.
 
         `add_phone`/`remove_phone` are what the CLI's paired `--add-phone` and
-        `--remove-phone` options use (D19); this is the same operation for a
-        caller that already knows the full list it wants, such as a single web
-        form field. Every value is validated before anything is written, so an
+        `--remove-phone` options use; this is the same operation for a caller
+        that already knows the full list it wants, such as a single web form
+        field. Every value is validated before anything is written, so an
         invalid or repeated number leaves the contact's phones untouched.
         """
         parsed: list[Phone] = []
@@ -73,7 +73,7 @@ class Contact:
 
     def matches(self, query: str) -> bool:
         """Whether `query` is a substring of the name, a phone, the email or
-        the address, ignoring case, as required by C2."""
+        the address, ignoring case."""
         query = query.casefold()
         haystacks = [str(self.name), str(self.email or ""), str(self.address or "")]
         haystacks.extend(str(phone) for phone in self.phones)

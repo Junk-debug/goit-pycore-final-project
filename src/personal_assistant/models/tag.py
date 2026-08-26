@@ -1,4 +1,4 @@
-"""The tag of a note: a keyword describing what the note is about (T1)."""
+"""The tag of a note: a keyword describing what the note is about."""
 
 from __future__ import annotations
 
@@ -13,11 +13,10 @@ class Tag(Field[str]):
 
     A tag is normalised to lower case, so `Python` and `python` name the same
     subject. Without that, searching and sorting by tag would split one subject
-    into several and quietly return half of the notes (T2, T3).
+    into several and quietly return half of the notes.
     """
 
     def parse(self, raw: str) -> str:
-        """Validate the keyword and return it in its normalised form (D20)."""
         if not raw:
             raise ValidationError("A tag cannot be empty.")
         if any(character.isspace() for character in raw):
@@ -31,7 +30,7 @@ class Tag(Field[str]):
         return raw.lower()
 
     def __lt__(self, other: object) -> bool:
-        """Order tags alphabetically, which is what sorting by tag means (T3)."""
+        """Order tags alphabetically, which is what sorting by tag means."""
         if isinstance(other, Tag):
             return self.value < other.value
         return NotImplemented
