@@ -33,7 +33,14 @@ def test_global_commands_are_registered(command) -> None:
         assert name in command.commands
 
 
-def test_a_known_command_succeeds(command, state) -> None:
+def _stub_web(monkeypatch) -> None:
+    """Keep 'web' from opening a browser or binding a real port."""
+    monkeypatch.setattr("webbrowser.open", lambda url: True)
+    monkeypatch.setattr("flask.Flask.run", lambda self, **kwargs: None)
+
+
+def test_a_known_command_succeeds(command, state, monkeypatch) -> None:
+    _stub_web(monkeypatch)
     assert cli.dispatch(command, ["web"], state) == 0
 
 
@@ -84,11 +91,12 @@ def _feed(monkeypatch, lines) -> None:
 def test_the_loop_runs_until_the_exit_command(
     command, state, monkeypatch, capsys
 ) -> None:
+    _stub_web(monkeypatch)
     _feed(monkeypatch, ["web", "exit", "web"])
 
     assert cli.run_loop(command, state) == 0
     printed = capsys.readouterr().out
-    assert printed.count("not implemented yet") == 1
+    assert printed.count("Serving on") == 1
     assert cli.FAREWELL in printed
 
 
