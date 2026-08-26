@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Notes{% endblock %}
+{% block content %}
+  <div class="row">
+    <h1>Notes</h1>
+    <a class="button primary" href="{{ url_for('new_note_form') }}">+ Write a note</a>
+  </div>
+
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <form class="filters" method="get">
+    <input type="text" name="query" value="{{ query }}" placeholder="Search text" style="min-width: 14rem;">
+    <input type="text" name="tag" value="{{ tag }}" list="known-tags" placeholder="Filter by tag">
+    <datalist id="known-tags">
+      {% for name in all_tags %}<option value="{{ name }}">{% endfor %}
+    </datalist>
+    <select name="sort">
+      <option value="">Sort…</option>
+      {% for key in sort_keys %}
+        <option value="{{ key }}" {{ "selected" if sort == key }}>{{ key|capitalize }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Apply</button>
+  </form>
+
+  {% if notes %}
+    <div class="note-grid">
+      {% for note in notes %}
+        <a class="note-card" href="{{ url_for('show_note', note_id=note.id) }}">
+          <div class="preview">{{ note.preview() }}</div>
+          <div class="tags">
+            {% for name in note.tag_names() %}<span class="tag">{{ name }}</span>{% endfor %}
+          </div>
+          <div class="meta">Updated {{ note.stamp(note.updated) }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M6 4h9l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M9 10h6M9 14h6"/>
+      </svg>
+      <div>{{ "No notes yet." if not query and not tag else "No note matches." }}</div>
+    </div>
+  {% endif %}
+{% endblock %}

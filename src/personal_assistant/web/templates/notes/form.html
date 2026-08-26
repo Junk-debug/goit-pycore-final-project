@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit note" if note else "New note" }}{% endblock %}
+{% block content %}
+  <h1 style="margin-bottom: 1.5rem;">{{ "Edit note " + note.id|string if note else "New note" }}</h1>
+
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  {% set posted = values or {} %}
+  <form class="edit card" method="post"
+        action="{{ url_for('update_note', note_id=note.id) if note else url_for('create_note') }}">
+    <label for="text">Text</label>
+    <textarea id="text" name="text" required>{{ posted.get('text', note.text.value if note else '') }}</textarea>
+
+    <label for="tags">Tags</label>
+    <input id="tags" name="tags" placeholder="study, python"
+           value="{{ posted.get('tags', note.tag_names()|join(', ') if note else '') }}">
+
+    <div class="actions">
+      <input type="submit" value="{{ 'Save changes' if note else 'Save note' }}">
+      <a class="button" href="{{ url_for('show_note', note_id=note.id) if note else url_for('list_notes') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

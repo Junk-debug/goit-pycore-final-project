@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit contact" if contact else "New contact" }}{% endblock %}
+{% block content %}
+  <h1 style="margin-bottom: 1.5rem;">{{ "Edit " + contact.name.value if contact else "New contact" }}</h1>
+
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  {% set posted = values or {} %}
+  <form class="edit card" method="post"
+        action="{{ url_for('update_contact', name=contact.name.value) if contact else url_for('create_contact') }}">
+    <label for="name">Name</label>
+    <input id="name" name="name" required
+           value="{{ posted.get('name', contact.name.value if contact else '') }}">
+
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email"
+           value="{{ posted.get('email', contact.email if contact and contact.email else '') }}"
+           placeholder="Leave blank to clear">
+
+    <label for="address">Address</label>
+    <input id="address" name="address"
+           value="{{ posted.get('address', contact.address if contact and contact.address else '') }}"
+           placeholder="Leave blank to clear">
+
+    <label for="birthday">Birthday</label>
+    <input id="birthday" name="birthday" type="date" max="{{ today }}"
+           value="{{ posted.get('birthday', contact.birthday.value.isoformat() if contact and contact.birthday else '') }}">
+
+    <label for="phone">Phone numbers</label>
+    <input id="phone" name="phone" placeholder="+48111222333, +48999888777"
+           value="{{ posted.get('phone', contact.phones|map('string')|join(', ') if contact else '') }}">
+
+    <div class="actions">
+      <input type="submit" value="{{ 'Save changes' if contact else 'Create contact' }}">
+      <a class="button" href="{{ url_for('show_contact', name=contact.name.value) if contact else url_for('list_contacts') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

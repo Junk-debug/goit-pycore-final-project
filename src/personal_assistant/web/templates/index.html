@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Personal Assistant{% endblock %}
+{% block content %}
+  <h1 style="margin-bottom: 1.75rem;">Welcome back</h1>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div class="card stat">
+      <div>
+        <div class="figure">{{ contact_count }}</div>
+        <div class="muted">contact{{ '' if contact_count == 1 else 's' }}</div>
+      </div>
+      <a class="button primary" href="{{ url_for('list_contacts') }}">Open →</a>
+    </div>
+    <div class="card stat">
+      <div>
+        <div class="figure">{{ note_count }}</div>
+        <div class="muted">note{{ '' if note_count == 1 else 's' }}</div>
+      </div>
+      <a class="button primary" href="{{ url_for('list_notes') }}">Open →</a>
+    </div>
+  </div>
+{% endblock %}

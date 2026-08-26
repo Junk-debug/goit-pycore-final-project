@@ -14,7 +14,11 @@ dependencies = [
 assistant = "personal_assistant.cli:main"
 
 [project.optional-dependencies]
+web = [
+    "flask>=3",
+]
 dev = [
+    "personal-assistant[web]",
     "pytest>=8.0",
     "ruff>=0.6",
     "mypy>=1.11",
@@ -28,7 +32,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-personal_assistant = ["py.typed"]
+personal_assistant = ["py.typed", "web/templates/**/*.html"]
 
 [tool.ruff]
 line-length = 88
