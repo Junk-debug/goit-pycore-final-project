@@ -34,7 +34,7 @@ class Birthday(Field[date]):
 
         A 29 February without a matching leap year is celebrated on 1 March
         instead, and a date that lands on a Saturday or Sunday is moved to the
-        following Monday, per C5.
+        following Monday.
         """
         occurrence = self._next_occurrence(today)
         if occurrence.weekday() >= SATURDAY:
