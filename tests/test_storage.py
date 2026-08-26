@@ -1,4 +1,4 @@
-"""Tests for persistence: requirements P1 and P2."""
+"""Tests for persistence: data is saved on disk and survives a restart."""
 
 from __future__ import annotations
 

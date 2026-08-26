@@ -1,6 +1,6 @@
 """Tests for the candidates offered on Tab.
 
-What `prompt_toolkit` draws on the screen is out of scope by D22. What the
+What `prompt_toolkit` draws on the screen is out of scope. What the
 assistant proposes is not: the candidates come from the parser, so a wrong
 answer here means the interface promises a command it does not have.
 """

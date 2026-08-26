@@ -1,4 +1,4 @@
-"""Tests for the contact models and their validation rules (D20)."""
+"""Tests for the contact models and their validation rules."""
 
 from __future__ import annotations
 

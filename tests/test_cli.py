@@ -63,9 +63,9 @@ def test_help_lists_the_commands(command, state, capsys) -> None:
 
 def test_help_reaches_a_command_by_path(command, state, capsys) -> None:
     """`help contact add` and `contact add --help` cannot describe the
-    command differently (D25) — checked by comparing them directly, rather
-    than by searching the rendered text for a flag name. Rendering wraps to
-    the terminal width, which some CI runners report much narrower than any
+    command differently — checked by comparing them directly, rather than
+    by searching the rendered text for a flag name. Rendering wraps to the
+    terminal width, which some CI runners report much narrower than any
     real terminal, and a search for raw text is exactly what that breaks:
     an option name can land split across the wrap.
     """
@@ -79,8 +79,8 @@ def test_help_reaches_a_command_by_path(command, state, capsys) -> None:
 
 
 def test_a_leaf_command_is_reached_not_just_named(command) -> None:
-    """The `add` action of `contact` carries its own options (D25): drilling
-    into `help contact add` must reach something more specific than the
+    """The `add` action of `contact` carries its own options: drilling into
+    `help contact add` must reach something more specific than the
     one-line listing `help contact` already gives. Checked on the command
     tree itself, which is exact and immune to how any of it later renders.
     """

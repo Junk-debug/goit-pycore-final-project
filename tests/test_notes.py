@@ -1,8 +1,7 @@
 """Tests for the notes: the models, the notebook and the command group.
 
-The validation rules of D20 are covered with their passing and their failing
-cases, as D22 asks, and every command gets its successful path and its main
-error.
+The validation rules are covered with their passing and their failing
+cases, and every command gets its successful path and its main error.
 """
 
 from __future__ import annotations
@@ -231,7 +230,7 @@ def test_every_tag_in_use_is_listed_once(book) -> None:
 
 
 def test_the_notebook_survives_a_restart(tmp_path, book) -> None:
-    """Notes are part of the state, so P2 has to hold for them too."""
+    """Notes are part of the state, so restarting must not lose them either."""
     state = AppState.empty()
     state.section(NoteBook).update(book)
     storage = Storage(tmp_path / "data.pkl")
