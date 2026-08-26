@@ -2,8 +2,7 @@
 
 The only module that writes to the terminal. Commands decide what to say,
 this module decides how it looks, which keeps formatting out of the domain
-and out of the command bodies; it is also what lets the planned web interface
-reuse the same commands unchanged (D8).
+and out of the command bodies.
 
 Everything is drawn by `rich`, which arrives as a hard dependency of `typer`.
 """
