@@ -5,6 +5,30 @@ A personal assistant with a command-line interface: an address book and notes.
 Final team project of the Python Programming: Foundations and Best Practices
 course.
 
+## Features
+
+- **Contacts** — name, several phone numbers, email, address and birthday,
+  each validated on entry so nothing invalid is ever stored.
+- **Notes** — free text with tags, searchable by text or by tag.
+- **Search, filter and sort** for both contacts and notes, including an
+  upcoming-birthdays view that shifts a weekend birthday to the following
+  Monday.
+- **Two ways to run it** — an interactive REPL or a single command per
+  invocation — accepting exactly the same commands, so scripts and shell
+  usage work the same way as the interactive session.
+- **Tab completion and command history** in the REPL, with completions (tags
+  included) drawn from the live command tree and data, never a separate list
+  that can drift out of sync.
+- **Contextual help** — `help <command>...` and `<command>... --help` always
+  describe a command identically.
+- **Confirmation before deleting** a contact or note, skipped only with
+  `--force` or when the input isn't an interactive terminal.
+- **Persistent storage** in the user's home directory, read on startup and
+  written on exit; a file that can't be read is moved aside instead of
+  crashing the assistant.
+- **Web interface** (`assistant web`) built on Flask, sharing the exact same
+  validation and data as the CLI.
+
 ## Requirements
 
 - Python 3.10 or newer
