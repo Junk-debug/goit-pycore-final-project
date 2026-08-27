@@ -35,6 +35,38 @@ course.
 
 ## Installation
 
+Requires Python 3.10 or newer.
+
+### With pipx
+
+The assistant is an application rather than a library, so the tidiest way to
+install it is [pipx](https://pipx.pypa.io/): it keeps the project in an
+environment of its own and still makes `assistant` available from any
+directory, with nothing to activate.
+
+```bash
+pipx install git+https://github.com/Junk-debug/goit-pycore-final-project.git
+```
+
+Or, from a clone of the repository:
+
+```bash
+git clone https://github.com/Junk-debug/goit-pycore-final-project.git
+cd goit-pycore-final-project
+pipx install .
+```
+
+If `assistant` is not found afterwards, run `pipx ensurepath` once and open a
+new terminal. To remove it: `pipx uninstall personal-assistant`.
+
+pipx itself comes from `brew install pipx` on macOS, `sudo apt install pipx`
+on Debian and Ubuntu, and `py -m pip install --user pipx` on Windows.
+
+### Without pipx
+
+If you would rather not install another tool, a plain virtual environment
+does the job:
+
 ```bash
 git clone https://github.com/Junk-debug/goit-pycore-final-project.git
 cd goit-pycore-final-project
@@ -42,10 +74,18 @@ cd goit-pycore-final-project
 python3 -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
-pip install -e .
+pip install .
 ```
 
-Once installed, the `assistant` command is available from any directory.
+`assistant` then works from any directory for as long as that environment is
+active. Activate it again in a new terminal with the same `source` line, and
+leave it with `deactivate`.
+
+One thing to know: `pip install .` outside a virtual environment fails on
+macOS with Homebrew, and on Debian, Ubuntu and Fedora. Those systems mark
+their Python as externally managed and refuse to let pip write into it. The
+virtual environment above is what sidesteps that, which is why the step is
+not optional.
 
 ## Two ways to run it
 
@@ -279,9 +319,12 @@ read is moved aside rather than deleted, and the assistant starts empty.
 
 ## Development
 
-Install the project together with the developer tools:
+Editing the code calls for an editable install instead, in a venv of its own:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
 pip install -e ".[dev]"
 ```
 
