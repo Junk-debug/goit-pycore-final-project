@@ -266,14 +266,6 @@ Starts a local server and opens the browser to it. It shows the same
 contacts and notes as the command line, with the same validation, since both
 interfaces read and write the same data.
 
-Needs Flask, which is an optional extra rather than part of the base install:
-
-```bash
-pip install -e ".[web]"
-```
-
-Without it, `web` explains how to install the extra instead of failing.
-
 ```bash
 assistant web
 ```
@@ -287,8 +279,7 @@ read is moved aside rather than deleted, and the assistant starts empty.
 
 ## Development
 
-Install the project together with the developer tools, which already include
-the web extra:
+Install the project together with the developer tools:
 
 ```bash
 pip install -e ".[dev]"

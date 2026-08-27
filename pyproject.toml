@@ -8,17 +8,14 @@ dependencies = [
     "typer>=0.12",
     "rich>=13",
     "prompt_toolkit>=3",
+    "flask>=3",
 ]
 
 [project.scripts]
 assistant = "personal_assistant.cli:main"
 
 [project.optional-dependencies]
-web = [
-    "flask>=3",
-]
 dev = [
-    "personal-assistant[web]",
     "pytest>=8.0",
     "ruff>=0.6",
     "mypy>=1.11",

@@ -46,16 +46,9 @@ def register(app: typer.Typer) -> None:
     @app.command("web")
     def start_web(ctx: typer.Context) -> None:
         """start the web interface"""
-        try:
-            from personal_assistant.web.app import create_app
-        except ImportError:
-            ui.failure(
-                "The web interface needs Flask, which is not installed.\n"
-                "Install it with: pip install -e '.[web]'"
-            )
-            return
-
         import webbrowser
+
+        from personal_assistant.web.app import create_app
 
         host, port = "127.0.0.1", 5050
         url = f"http://{host}:{port}/"
